@@ -23,6 +23,12 @@ function getDB() {
 
     if ($isNew) {
         initializeDatabase($db);
+    } else {
+        // Verify tables exist (handles corrupted/empty DB files)
+        $result = $db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='conversations'");
+        if (!$result) {
+            initializeDatabase($db);
+        }
     }
 
     return $db;
@@ -33,8 +39,8 @@ function initializeDatabase($db) {
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL DEFAULT "New Chat",
-            created_at TEXT NOT NULL DEFAULT (datetime("now")),
-            updated_at TEXT NOT NULL DEFAULT (datetime("now")),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             pinned INTEGER NOT NULL DEFAULT 0,
             model TEXT DEFAULT NULL,
             total_tokens_in INTEGER NOT NULL DEFAULT 0,
@@ -52,7 +58,7 @@ function initializeDatabase($db) {
             tokens_in INTEGER DEFAULT 0,
             tokens_out INTEGER DEFAULT 0,
             model TEXT DEFAULT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime("now")),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             edited INTEGER NOT NULL DEFAULT 0,
             bookmarked INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
@@ -64,8 +70,8 @@ function initializeDatabase($db) {
             fact TEXT NOT NULL,
             source_message_id INTEGER DEFAULT NULL,
             confidence REAL NOT NULL DEFAULT 1.0,
-            created_at TEXT NOT NULL DEFAULT (datetime("now")),
-            updated_at TEXT NOT NULL DEFAULT (datetime("now")),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             active INTEGER NOT NULL DEFAULT 1
         );
 
@@ -74,7 +80,7 @@ function initializeDatabase($db) {
             message_id INTEGER NOT NULL,
             conversation_id TEXT NOT NULL,
             note TEXT DEFAULT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime("now")),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
             FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
         );
