@@ -11,6 +11,8 @@ import { initSidebar } from './sidebar.js';
 import { initMemoryPanel } from './memory.js';
 import { initImageUpload, initDragDrop, initVoiceRecognition } from './media.js';
 import { initShortcuts } from './shortcuts.js';
+import { initKnowledgePanel } from './knowledge.js';
+import { initTasksPanel } from './tasks.js';
 
 // ============================================
 // INITIALIZATION
@@ -34,6 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize all modules
         initSidebar();
         initMemoryPanel();
+        initKnowledgePanel();
+        initTasksPanel();
         initImageUpload();
         initDragDrop();
         initVoiceRecognition();
@@ -50,6 +54,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Restore link preference
         const savedLink = localStorage.getItem('linkEmotionsToThemes');
         if (savedLink !== null) state.linkEmotionsToThemes = savedLink === 'true';
+
+        // Restore feature flags
+        const savedThinking = localStorage.getItem('extendedThinking');
+        if (savedThinking !== null) state.extendedThinking = savedThinking === 'true';
+        const savedTools = localStorage.getItem('enableTools');
+        if (savedTools !== null) state.enableTools = savedTools !== 'false';
+        const savedKB = localStorage.getItem('enableKB');
+        if (savedKB !== null) state.enableKB = savedKB !== 'false';
+
+        // Update UI toggles
+        const thinkingToggle = document.getElementById('extendedThinkingToggle');
+        if (thinkingToggle) thinkingToggle.checked = state.extendedThinking;
+        const toolsToggle = document.getElementById('toolsToggle');
+        if (toolsToggle) toolsToggle.checked = state.enableTools;
+        const kbToggle = document.getElementById('kbToggle');
+        if (kbToggle) kbToggle.checked = state.enableKB;
 
     } catch (error) {
         console.error('Init error:', error);
@@ -93,6 +113,24 @@ function setupEventListeners() {
     // Settings toggle (placeholder - could open admin or a settings panel)
     document.getElementById('settingsToggle')?.addEventListener('click', () => {
         window.open('admin-login.html', '_blank');
+    });
+
+    // Feature toggles
+    document.getElementById('extendedThinkingToggle')?.addEventListener('change', (e) => {
+        state.extendedThinking = e.target.checked;
+        localStorage.setItem('extendedThinking', state.extendedThinking);
+        const label = document.getElementById('thinkingLabel');
+        if (label) label.textContent = state.extendedThinking ? 'Deep thinking ON' : 'Deep thinking';
+    });
+
+    document.getElementById('toolsToggle')?.addEventListener('change', (e) => {
+        state.enableTools = e.target.checked;
+        localStorage.setItem('enableTools', state.enableTools);
+    });
+
+    document.getElementById('kbToggle')?.addEventListener('change', (e) => {
+        state.enableKB = e.target.checked;
+        localStorage.setItem('enableKB', state.enableKB);
     });
 }
 

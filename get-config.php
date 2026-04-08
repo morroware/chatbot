@@ -38,6 +38,10 @@ unset($config['admin']);
 unset($config['emotion_theme_map']);
 unset($config['models']);
 unset($config['model_ids']);
+// Remove scheduler secret from public config
+if (isset($config['general']['scheduler_secret'])) {
+    unset($config['general']['scheduler_secret']);
+}
 
 echo json_encode([
     'success' => true,

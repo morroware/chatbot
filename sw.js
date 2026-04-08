@@ -1,5 +1,5 @@
 // Service worker - caches static assets for faster loads
-const CACHE_NAME = 'chatbot-v2';
+const CACHE_NAME = 'chatbot-v3';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -24,6 +24,8 @@ const STATIC_ASSETS = [
     './js/state.js',
     './js/config.js',
     './js/shortcuts.js',
+    './js/knowledge.js',
+    './js/tasks.js',
 ];
 
 self.addEventListener('install', (e) => {
