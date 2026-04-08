@@ -28,6 +28,9 @@ function getDB() {
         $result = $db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='conversations'");
         if (!$result) {
             initializeDatabase($db);
+        } else {
+            // Run any pending migrations for existing databases
+            runMigrations($db);
         }
     }
 
