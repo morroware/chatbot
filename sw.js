@@ -1,11 +1,29 @@
-// Minimal service worker - caches static assets for faster loads
-const CACHE_NAME = 'chatbot-v1';
+// Service worker - caches static assets for faster loads
+const CACHE_NAME = 'chatbot-v2';
 const STATIC_ASSETS = [
     './',
     './index.html',
     './styles.css',
     './avatar.svg',
     './manifest.json',
+    './css/variables.css',
+    './css/base.css',
+    './css/sidebar.css',
+    './css/header.css',
+    './css/chat.css',
+    './css/input.css',
+    './css/components.css',
+    './css/responsive.css',
+    './js/app.js',
+    './js/api.js',
+    './js/chat.js',
+    './js/sidebar.js',
+    './js/memory.js',
+    './js/media.js',
+    './js/ui.js',
+    './js/state.js',
+    './js/config.js',
+    './js/shortcuts.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -210,13 +210,17 @@ function addMessage($conversationId, $role, $content, $extra = []) {
     $stmt->execute();
     $messageId = $db->lastInsertRowID();
 
-    // Update conversation
-    $db->exec("UPDATE conversations SET
-        updated_at = datetime('now'),
+    // Update conversation counters
+    $updateStmt = $db->prepare('UPDATE conversations SET
+        updated_at = datetime(\'now\'),
         message_count = message_count + 1,
-        total_tokens_in = total_tokens_in + " . intval($extra['tokens_in'] ?? 0) . ",
-        total_tokens_out = total_tokens_out + " . intval($extra['tokens_out'] ?? 0) . "
-        WHERE id = " . $db->escapeString($conversationId));
+        total_tokens_in = total_tokens_in + :tokens_in,
+        total_tokens_out = total_tokens_out + :tokens_out
+        WHERE id = :conv_id');
+    $updateStmt->bindValue(':tokens_in', intval($extra['tokens_in'] ?? 0), SQLITE3_INTEGER);
+    $updateStmt->bindValue(':tokens_out', intval($extra['tokens_out'] ?? 0), SQLITE3_INTEGER);
+    $updateStmt->bindValue(':conv_id', $conversationId, SQLITE3_TEXT);
+    $updateStmt->execute();
 
     return $messageId;
 }

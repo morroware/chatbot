@@ -227,6 +227,60 @@ if ($lastUserMessage && $lastUserMessage['role'] === 'user') {
 }
 
 // ============================================
+// CONTEXT MANAGEMENT
+// ============================================
+function manageContext($messages, $config) {
+    $maxMessages = intval($config['general']['max_context_messages'] ?? 20);
+    $recentToKeep = intval($config['general']['recent_messages_to_keep'] ?? 10);
+
+    if (count($messages) <= $maxMessages) {
+        return $messages;
+    }
+
+    $recentMessages = array_slice($messages, -$recentToKeep);
+    $oldMessages = array_slice($messages, 0, -$recentToKeep);
+
+    $summaryParts = [];
+    foreach ($oldMessages as $msg) {
+        $role = $msg['role'] === 'user' ? 'User' : ($config['general']['bot_name'] ?? 'Assistant');
+        $content = '';
+
+        if (is_array($msg['content'])) {
+            foreach ($msg['content'] as $part) {
+                if ($part['type'] === 'text') {
+                    $content = $part['text'];
+                    break;
+                } elseif ($part['type'] === 'image') {
+                    $content = '[shared an image]';
+                }
+            }
+        } else {
+            $content = $msg['content'];
+        }
+
+        if (strlen($content) > 200) {
+            $content = substr($content, 0, 200) . '...';
+        }
+
+        $summaryParts[] = "{$role}: {$content}";
+    }
+
+    $summaryText = implode("\n", $summaryParts);
+
+    $contextMessage = [
+        'role' => 'user',
+        'content' => [[
+            'type' => 'text',
+            'text' => "[CONVERSATION CONTEXT - Earlier messages:\n{$summaryText}\n\nContinue naturally.]"
+        ]]
+    ];
+
+    return array_merge([$contextMessage], $recentMessages);
+}
+
+$messages = manageContext($messages, $config);
+
+// ============================================
 // PREPARE API REQUEST
 // ============================================
 $systemPrompt = buildSystemPrompt($config, $emotions, $themes);

@@ -3,7 +3,7 @@
  * Message display, streaming, message actions (edit, regenerate, delete, bookmark, TTS, copy)
  */
 
-import { state, CONTEXT_CONFIG } from './state.js';
+import { state, CONTEXT_CONFIG, SUGGESTED_PROMPTS } from './state.js';
 import * as api from './api.js';
 import { applyTheme, updateEmotion, updateTokenCount, showNotification, triggerHaptic, escapeHtml, formatTimestamp, setInputState } from './ui.js';
 import { refreshConversationList } from './sidebar.js';
@@ -406,12 +406,18 @@ function addMessageActions(messageDiv, text, role) {
     // Delete
     const delBtn = createActionBtn('&#128465;', 'Delete message', () => {
         if (!confirm('Delete this message?')) return;
-        const idx = Array.from(messageDiv.parentElement.children).indexOf(messageDiv);
+
+        // Find index before removal to sync local history
+        const allMessages = Array.from(document.querySelectorAll('#chatContainer .message'));
+        const idx = allMessages.indexOf(messageDiv);
+        if (idx >= 0 && idx < state.conversationHistory.length) {
+            state.conversationHistory.splice(idx, 1);
+            state.messageMetadata.splice(idx, 1);
+        }
+
         messageDiv.remove();
 
-        // Remove from local history (approximate by index)
-        const msgElements = document.querySelectorAll('#chatContainer .message');
-        // Also delete from DB if we have an ID
+        // Delete from DB if we have an ID
         const msgId = messageDiv.dataset.messageId;
         if (msgId) api.deleteMessage(parseInt(msgId));
     });
@@ -563,7 +569,6 @@ export function setupSuggestedPrompts() {
     const container = document.getElementById('suggestedPrompts');
     if (!container) return;
 
-    const { SUGGESTED_PROMPTS } = require_state();
     container.innerHTML = '';
 
     // Pick 3 random prompts
@@ -576,18 +581,6 @@ export function setupSuggestedPrompts() {
         btn.addEventListener('click', () => sendMessage(prompt));
         container.appendChild(btn);
     }
-}
-
-function require_state() {
-    // Inline import workaround for non-async context
-    return { SUGGESTED_PROMPTS: [
-        "What can you help me with?",
-        "Tell me something interesting",
-        "Help me brainstorm ideas",
-        "Explain a complex topic simply",
-        "Write something creative",
-        "Help me solve a problem",
-    ]};
 }
 
 // ============================================

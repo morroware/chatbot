@@ -2,6 +2,8 @@ let configData = null;
 let emotionsData = null;
 let themesData = null;
 let emotionThemeMap = {};
+let modelsData = {};
+let modelIdsData = {};
 
 // Check authentication on load
 window.addEventListener('DOMContentLoaded', async () => {
@@ -34,6 +36,8 @@ async function loadConfigurations() {
         emotionsData = data.emotions;
         themesData = data.themes;
         emotionThemeMap = data.emotion_theme_map || {};
+        modelsData = data.config.models || configData.models || {};
+        modelIdsData = data.config.model_ids || configData.model_ids || {};
         
         populateForms();
         showMessage('Configuration loaded successfully', 'success');
@@ -292,7 +296,7 @@ function addEmotion() {
         label: key.toUpperCase(),
         description: 'New emotion',
         color: '#ffffff',
-        emoji: 'ðŸ˜€',
+        emoji: '😀',
         filter: 'brightness(1.0)',
         shake: 'false',
         glow: 'false'
@@ -394,10 +398,11 @@ function escapeINIValue(value) {
     if (typeof value !== 'string') return value;
     return value
         .replace(/\\/g, '\\\\')  // Escape backslashes first
-        .replace(/"/g, '\\"')     // Escape quotes
-        .replace(/\n/g, '\\n')    // Escape newlines
-        .replace(/\r/g, '\\r')    // Escape carriage returns
-        .replace(/\t/g, '\\t');   // Escape tabs
+        .replace(/"/g, '\\"')    // Escape quotes
+        .replace(/\$/g, '\\$')   // Escape $ (PHP parse_ini_file interprets $ in double quotes)
+        .replace(/\n/g, '\\n')   // Escape newlines
+        .replace(/\r/g, '\\r')   // Escape carriage returns
+        .replace(/\t/g, '\\t');  // Escape tabs
 }
 
 function generateEmotionsINI() {
@@ -408,7 +413,7 @@ function generateEmotionsINI() {
         content += `label = "${escapeINIValue(emotion.label || '')}"\n`;
         content += `description = "${escapeINIValue(emotion.description || '')}"\n`;
         content += `color = "${escapeINIValue(emotion.color || '#ffffff')}"\n`;
-        content += `emoji = "${escapeINIValue(emotion.emoji || 'ðŸ˜€')}"\n`;
+        content += `emoji = "${escapeINIValue(emotion.emoji || '😀')}"\n`;
         content += `filter = "${escapeINIValue(emotion.filter || 'brightness(1.0)')}"\n`;
         content += `shake = ${emotion.shake || 'false'}\n`;
         content += `glow = ${emotion.glow || 'false'}\n`;
@@ -453,7 +458,26 @@ function generateConfigINI(stored) {
         const value = configData.general[key];
         content += `${key} = "${escapeINIValue(value || '')}"\n`;
     });
-    
+
+    // Preserve [models] section
+    if (Object.keys(modelsData).length > 0) {
+        content += '\n[models]\n';
+        Object.keys(modelsData).forEach(key => {
+            const value = typeof modelsData[key] === 'string'
+                ? modelsData[key]
+                : `${modelsData[key].name || key}|${modelsData[key].provider || 'anthropic'}`;
+            content += `${key} = "${escapeINIValue(value)}"\n`;
+        });
+    }
+
+    // Preserve [model_ids] section
+    if (Object.keys(modelIdsData).length > 0) {
+        content += '\n[model_ids]\n';
+        Object.keys(modelIdsData).forEach(key => {
+            content += `${key} = "${escapeINIValue(modelIdsData[key])}"\n`;
+        });
+    }
+
     // Add emotion-theme mapping section
     if (Object.keys(emotionThemeMap).length > 0) {
         content += '\n[emotion_theme_map]\n';
@@ -461,21 +485,21 @@ function generateConfigINI(stored) {
             content += `${emotionKey} = "${emotionThemeMap[emotionKey]}"\n`;
         });
     }
-    
+
     content += '\n[personality]\n';
     Object.keys(configData.personality || {}).forEach(key => {
         content += `${key} = "${escapeINIValue(configData.personality[key] || '')}"\n`;
     });
-    
+
     content += '\n[admin]\n';
     content += `username = "${escapeINIValue(configData.admin?.username || 'admin')}"\n`;
-    content += `password = "${stored.password_hash}"\n`;
-    
+    content += `password = "${escapeINIValue(stored.password_hash)}"\n`;
+
     content += '\n[api]\n';
-    content += `api_key = "${stored.api_key}"\n`;
+    content += `api_key = "${escapeINIValue(stored.api_key)}"\n`;
     content += `endpoint = "${escapeINIValue(stored.endpoint || 'https://api.anthropic.com/v1/messages')}"\n`;
     content += `anthropic_version = "${escapeINIValue(stored.version || '2023-06-01')}"\n`;
-    
+
     return content;
 }
 
