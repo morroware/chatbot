@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Chatbot Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #2d2d2d 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Compact Header */
+        .admin-header {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff3d00 100%);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 6px 24px rgba(255, 107, 53, 0.3);
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .admin-header h1 {
+            margin: 0;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-logout {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 10px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        /* Tabs - Mobile Optimized */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 0.5rem;
+        }
+        
+        .tab {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            color: #ffffff;
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff3d00 100%);
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+        
+        .tab:hover {
+            background: rgba(255, 107, 53, 0.2);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Config Cards */
+        .config-card {
+            background: rgba(26, 26, 26, 0.95);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .config-card h3 {
+            color: #ff6b35;
+            margin-bottom: 1.25rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-bottom: 2px solid rgba(255, 107, 53, 0.3);
+            padding-bottom: 0.75rem;
+        }
+        
+        /* Form Elements */
+        .form-label {
+            color: #00ff88;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-control, .form-select, textarea {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            color: #ffffff;
+            padding: 0.75rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        
+        .form-control:focus, .form-select:focus, textarea:focus {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: #ff6b35;
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+            color: #ffffff;
+            outline: none;
+        }
+        
+        textarea {
+            font-family: 'Courier New', monospace;
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        /* Buttons */
+        .btn-save {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+            border: none;
+            color: #1a1a1a;
+            padding: 0.75rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 700;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            width: 100%;
+        }
+        
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
+            color: #1a1a1a;
+        }
+        
+        .btn-add {
+            background: rgba(255, 107, 53, 0.2);
+            border: 1px solid #ff6b35;
+            color: #ff6b35;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .btn-add:hover {
+            background: rgba(255, 107, 53, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .btn-remove {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .btn-remove:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Items */
+        .emotion-item, .theme-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .emotion-theme-mapping-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .emotion-theme-mapping-item:hover {
+            border-color: rgba(255, 107, 53, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        .emotion-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-weight: 700;
+            display: inline-block;
+            color: white;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            font-size: 1rem;
+            min-width: 140px;
+            text-align: center;
+        }
+        
+        /* Alerts */
+        .alert-success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            color: #00ff88;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ff6b6b;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-info {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        /* Color Preview */
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+        
+        /* Theme Link Toggle */
+        .theme-link-toggle {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .theme-link-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+            margin: 0;
+        }
+        
+        .theme-link-label input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: #00ff88;
+        }
+        
+        .theme-link-label span {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #00ff88;
+        }
+        
+        .form-check {
+            padding-left: 0;
+        }
+        
+        .form-check-input {
+            float: none;
+            margin-left: 0;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        
+        .form-check-label {
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .text-muted {
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-size: 0.85rem;
+        }
+        
+        /* Responsive Grid */
+        @media (max-width: 767px) {
+            body {
+                padding: 0.75rem;
+            }
+            
+            .admin-header {
+                padding: 0.875rem 1rem;
+                border-radius: 12px;
+            }
+            
+            .admin-header h1 {
+                font-size: 1.1rem;
+            }
+            
+            .btn-logout {
+                padding: 0.5rem 1rem;
+                font-size: 0.85rem;
+            }
+            
+            .config-card {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+            
+            .config-card h3 {
+                font-size: 1.1rem;
+            }
+            
+            .tab {
+                font-size: 0.85rem;
+                padding: 0.5rem 0.875rem;
+            }
+            
+            textarea {
+                min-height: 100px;
+            }
+            
+            .emotion-badge {
+                font-size: 0.9rem;
+                min-width: 120px;
+                padding: 0.4rem 0.875rem;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding: 2rem;
+            }
+            
+            .admin-header {
+                padding: 1.5rem 2rem;
+                border-radius: 20px;
+            }
+            
+            .admin-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .config-card {
+                padding: 2rem;
+                border-radius: 20px;
+            }
+            
+            .btn-save {
+                width: auto;
+                min-width: 200px;
+            }
+        }
+        
+        /* Smooth scrolling for tabs */
+        .tabs::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .tabs::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        
+        .tabs::-webkit-scrollbar-thumb {
+            background: rgba(255, 107, 53, 0.5);
+            border-radius: 10px;
+        }
+        
+        .tabs::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 107, 53, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>⚙️ Chatbot Admin</h1>
+            <a href="admin-logout.php" class="btn-logout">Logout</a>
+        </div>
+
+        <div id="messageArea"></div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab(event, 'general')">General</div>
+            <div class="tab" onclick="switchTab(event, 'personality')">Personality</div>
+            <div class="tab" onclick="switchTab(event, 'emotions')">Emotions</div>
+            <div class="tab" onclick="switchTab(event, 'themes')">Themes</div>
+            <div class="tab" onclick="switchTab(event, 'advanced')">Advanced</div>
+            <div class="tab" onclick="switchTab(event, 'emotion-theme')">Emotion ↔ Theme</div>
+        </div>
+
+        <!-- General Settings Tab -->
+        <div id="tab-general" class="tab-content active">
+            <div class="config-card">
+                <h3>General Configuration</h3>
+                <form id="generalForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Bot Name</label>
+                            <input type="text" class="form-control" name="bot_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Bot Title</label>
+                            <input type="text" class="form-control" name="bot_title" required>
+                        </div>
+                    </div>
+                    <label class="form-label">Bot Description</label>
+                    <input type="text" class="form-control" name="bot_description" required>
+                    
+                    <label class="form-label">Welcome Title</label>
+                    <input type="text" class="form-control" name="welcome_title" required>
+                    
+                    <label class="form-label">Welcome Message</label>
+                    <textarea class="form-control" name="welcome_message" required></textarea>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Footer Text</label>
+                            <input type="text" class="form-control" name="footer_text" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Avatar Image Filename</label>
+                            <input type="text" class="form-control" name="avatar_image" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Default Emotion</label>
+                            <input type="text" class="form-control" name="default_emotion" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Default Theme</label>
+                            <input type="text" class="form-control" name="default_theme" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Max Tokens</label>
+                            <input type="number" class="form-control" name="max_tokens" required>
+                        </div>
+                    </div>
+                    
+                    <label class="form-label">Model</label>
+                    <input type="text" class="form-control" name="model" required>
+                    
+                    <!-- Emotion-Theme Linking Checkbox -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="form-check" style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 10px; padding: 1rem;">
+                                <input class="form-check-input" type="checkbox" name="link_emotions_to_themes" id="linkEmotionsCheck">
+                                <label class="form-check-label" for="linkEmotionsCheck" style="font-size: 1rem; color: #00ff88; margin-left: 0.5rem;">
+                                    🔗 Enable Emotion-Theme Linking
+                                    <small style="display: block; color: rgba(255, 255, 255, 0.6); margin-top: 0.5rem; font-weight: normal;">
+                                        When enabled, themes automatically change to match emotions
+                                    </small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-save mt-3">💾 Save General Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Personality Tab -->
+        <div id="tab-personality" class="tab-content">
+            <div class="config-card">
+                <h3>Personality Configuration</h3>
+                <form id="personalityForm">
+                    <label class="form-label">Base Description</label>
+                    <textarea class="form-control" name="base_description" required></textarea>
+                    <small class="text-muted">Use {bot_name} and {bot_description} as placeholders</small>
+                    
+                    <label class="form-label">Speaking Style</label>
+                    <textarea class="form-control" name="speaking_style" required></textarea>
+                    
+                    <label class="form-label">Special Trait</label>
+                    <textarea class="form-control" name="special_trait" required></textarea>
+                    
+                    <label class="form-label">Trait Examples (separated by |)</label>
+                    <textarea class="form-control" name="trait_examples" required></textarea>
+                    
+                    <label class="form-label">Formatting Note</label>
+                    <input type="text" class="form-control" name="formatting_note" required>
+                    
+                    <label class="form-label">Brevity Note</label>
+                    <input type="text" class="form-control" name="brevity_note" required>
+                    
+                    <button type="submit" class="btn btn-save">💾 Save Personality Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Emotions Tab -->
+        <div id="tab-emotions" class="tab-content">
+            <div class="config-card">
+                <h3>Emotions Configuration</h3>
+                <div id="emotionsList"></div>
+                <button type="button" class="btn btn-add" onclick="addEmotion()">+ Add Emotion</button>
+                <button type="button" class="btn btn-save mt-3" onclick="saveEmotions()">💾 Save All Emotions</button>
+            </div>
+        </div>
+
+        <!-- Themes Tab -->
+        <div id="tab-themes" class="tab-content">
+            <div class="config-card">
+                <h3>Themes Configuration</h3>
+                <div id="themesList"></div>
+                <button type="button" class="btn btn-add" onclick="addTheme()">+ Add Theme</button>
+                <button type="button" class="btn btn-save mt-3" onclick="saveThemes()">💾 Save All Themes</button>
+            </div>
+        </div>
+
+        <!-- Advanced Tab -->
+        <div id="tab-advanced" class="tab-content">
+            <div class="config-card">
+                <h3>API Configuration</h3>
+                <form id="apiForm">
+                    <label class="form-label">Anthropic API Key</label>
+                    <input type="password" class="form-control" name="api_key" required>
+                    <small class="text-muted">Your API key is encrypted and secure</small>
+                    
+                    <label class="form-label">API Endpoint</label>
+                    <input type="text" class="form-control" name="endpoint" required>
+                    
+                    <label class="form-label">Anthropic Version</label>
+                    <input type="text" class="form-control" name="anthropic_version" required>
+                    
+                    <button type="submit" class="btn btn-save">💾 Save API Settings</button>
+                </form>
+            </div>
+
+            <div class="config-card">
+                <h3>Admin Account</h3>
+                <form id="adminForm">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" name="username" required>
+                    
+                    <label class="form-label">New Password (leave blank to keep current)</label>
+                    <input type="password" class="form-control" name="password">
+                    
+                    <button type="submit" class="btn btn-save">💾 Update Admin Account</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Emotion-Theme Mapping Tab -->
+        <div id="tab-emotion-theme" class="tab-content">
+            <div class="config-card">
+                <h3>🔗 Emotion-Theme Mapping</h3>
+                <p class="text-muted mb-3">
+                    Configure which theme automatically activates for each emotion.
+                    When "Link Emotions to Themes" is enabled in General Settings, themes will change automatically when emotions change.
+                </p>
+                
+                <div class="alert-info mb-4">
+                    <strong>💡 How it works:</strong> When the bot's emotion changes (e.g., to "amped"), the UI will automatically switch to the theme you specify below.
+                    Users can toggle this feature on/off from the frontend theme menu.
+                </div>
+                
+                <div id="emotionThemeMappingList" class="mt-3"></div>
+                
+                <button type="button" class="btn btn-save mt-3" onclick="saveEmotionThemeMappings()">
+                    💾 Save Emotion-Theme Mappings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching function
+        function switchTab(event, tabName) {
+            // Remove active from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Add active to clicked tab
+            event.target.classList.add('active');
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+    </script>
+    <script src="admin.js"></script>
+</body>
+</html>

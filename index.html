@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" id="appTitle" content="Chatbot">
+    <meta name="theme-color" content="#6366f1" id="themeColor">
+    <meta name="description" id="metaDescription" content="Chat with AI - powered by Claude">
+    <title id="pageTitle">Chatbot</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-wrapper">
+            <div class="card shadow-lg">
+                <!-- Compact Mobile Header -->
+                <div class="card-header bg-primary text-white">
+                    <div class="header-content">
+                        <div class="header-main">
+                            <img id="headerAvatar" src="" alt="Bot" class="avatar-header">
+                            <div class="header-text">
+                                <h2 class="header-title" id="headerTitle">Loading...</h2>
+                                <p class="emotion-indicator" id="emotionIndicator">
+                                    <span id="botNameEmotion">Bot</span>: <span id="currentEmotion">loading</span>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Compact Theme Switcher -->
+                        <div class="theme-switcher-header" id="themeSwitcher">
+                            <button class="btn-theme-toggle" onclick="toggleThemeMenu()" title="Change theme" aria-label="Change theme">
+                                🎨
+                            </button>
+                            <div class="theme-menu" id="themeMenu" style="display: none;">
+                                <div class="theme-menu-header">Theme</div>
+                                <div id="themeOptions"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div id="chatContainer" class="chat-container">
+                        <div class="welcome-message">
+                            <img id="welcomeAvatar" src="" alt="Bot" class="avatar-large">
+                            <h4 id="welcomeTitle">Loading...</h4>
+                            <p id="welcomeMessage">Please wait...</p>
+                        </div>
+                    </div>
+
+                    <div class="input-area">
+                        <div id="imagePreviewContainer" class="image-preview-container d-none">
+                            <div class="image-preview-wrapper">
+                                <img id="imagePreview" src="" alt="Preview">
+                                <button type="button" class="btn-close-preview" id="removeImage" aria-label="Remove image">×</button>
+                            </div>
+                            <div class="image-stats" id="imageStats"></div>
+                        </div>
+
+                        <div class="input-controls">
+                            <input type="file" id="imageUpload" accept="image/*" class="d-none">
+                            <button type="button" class="btn btn-outline-secondary btn-icon" id="imageUploadBtn" title="Upload image" aria-label="Upload image">📷</button>
+                            <button type="button" class="btn btn-outline-secondary btn-icon" id="voiceInputBtn" title="Voice input" aria-label="Voice input">🎤</button>
+                            <input type="text" class="form-control message-input" id="messageInput" placeholder="Type a message..." autocomplete="off">
+                            <button type="button" class="btn btn-primary btn-icon" id="sendBtn" aria-label="Send message">
+                                <span id="sendIcon">➤</span>
+                                <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compact Footer -->
+            <div class="footer-credits">
+                <span class="footer-item">
+                    <small class="text-muted" id="footerText">Powered by AI</small>
+                </span>
+                <span class="footer-divider">•</span>
+                <button type="button" class="btn-footer" id="clearChat">Clear</button>
+                <span class="footer-divider">•</span>
+                <button type="button" class="btn-footer" id="exportChat">Export</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
