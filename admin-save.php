@@ -24,13 +24,16 @@ if (!in_array($file, $allowedFiles)) {
     exit;
 }
 
+// Resolve to absolute path within app directory
+$filePath = __DIR__ . '/' . $file;
+
 // Create timestamped backup
-$backupFile = $file . '.backup.' . time();
-if (file_exists($file)) {
-    copy($file, $backupFile);
-    
+$backupFile = $filePath . '.backup.' . time();
+if (file_exists($filePath)) {
+    copy($filePath, $backupFile);
+
     // Clean old backups (keep last 5)
-    $backups = glob($file . '.backup.*');
+    $backups = glob($filePath . '.backup.*');
     if (count($backups) > 5) {
         // Sort by modification time (oldest first)
         usort($backups, function($a, $b) {
@@ -45,16 +48,16 @@ if (file_exists($file)) {
 
 // Write new content
 $content = $data['content'];
-if (file_put_contents($file, $content) !== false) {
+if (file_put_contents($filePath, $content) !== false) {
     echo json_encode(['success' => true, 'message' => 'Configuration saved']);
 } else {
     // Restore most recent backup on failure
-    $backups = glob($file . '.backup.*');
+    $backups = glob($filePath . '.backup.*');
     if (!empty($backups)) {
         usort($backups, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
-        copy($backups[0], $file);
+        copy($backups[0], $filePath);
     }
     echo json_encode(['success' => false, 'error' => 'Failed to save file']);
 }

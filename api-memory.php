@@ -94,7 +94,7 @@ function handleExtract() {
     if (empty($messages)) jsonError('No messages to extract from', 400);
 
     // Load config for API access
-    $config = parse_ini_file('config.ini', true);
+    $config = parse_ini_file(__DIR__ . '/config.ini', true);
     $apiKey = trim($config['api']['api_key'] ?? '');
 
     if (empty($apiKey) || $apiKey === 'YourKeyHere') {
@@ -149,7 +149,7 @@ EOT;
     $conversationText = implode("\n", $extractMessages);
 
     $requestData = [
-        'model' => 'claude-haiku-4-5-20251001',
+        'model' => $config['model_ids']['haiku'] ?? 'claude-haiku-4-5-20251001',
         'max_tokens' => 1024,
         'system' => $extractionPrompt,
         'messages' => [

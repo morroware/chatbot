@@ -1,9 +1,9 @@
 <?php
 header('Content-Type: application/json');
 
-$config = parse_ini_file('config.ini', true);
-$emotions = parse_ini_file('emotions.ini', true);
-$themes = parse_ini_file('themes.ini', true);
+$config = parse_ini_file(__DIR__ . '/config.ini', true);
+$emotions = parse_ini_file(__DIR__ . '/emotions.ini', true);
+$themes = parse_ini_file(__DIR__ . '/themes.ini', true);
 
 if (!$config || !$emotions || !$themes) {
     echo json_encode(['success' => false, 'error' => 'Configuration files not found']);

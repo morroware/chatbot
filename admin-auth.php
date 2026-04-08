@@ -2,7 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 
-$config = parse_ini_file('config.ini', true);
+$config = parse_ini_file(__DIR__ . '/config.ini', true);
 
 if (!$config) {
     echo json_encode(['success' => false, 'error' => 'Configuration error']);
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $data['username'];
     $password = $data['password'];
     
-    if ($username === $config['admin']['username'] && 
+    if (hash_equals($config['admin']['username'], $username) &&
         password_verify($password, $config['admin']['password'])) {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_username'] = $username;

@@ -23,6 +23,7 @@ export async function fetchConversations(search = null) {
     const params = new URLSearchParams({ action: 'list' });
     if (search) params.set('search', search);
     const res = await fetch(`api-conversations.php?${params}`);
+    if (!res.ok) return [];
     const data = await res.json();
     return data.success ? data.conversations : [];
 }

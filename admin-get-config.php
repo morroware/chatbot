@@ -9,9 +9,9 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
 }
 
 // Load configurations
-$config = parse_ini_file('config.ini', true);
-$emotions = parse_ini_file('emotions.ini', true);
-$themes = parse_ini_file('themes.ini', true);
+$config = parse_ini_file(__DIR__ . '/config.ini', true);
+$emotions = parse_ini_file(__DIR__ . '/emotions.ini', true);
+$themes = parse_ini_file(__DIR__ . '/themes.ini', true);
 
 if (!$config || !$emotions || !$themes) {
     echo json_encode([
@@ -40,7 +40,7 @@ $_SESSION['stored_version'] = $config['api']['anthropic_version'] ?? '2023-06-01
 
 // Mask API key for frontend
 $apiKeySet = !empty($config['api']['api_key']) && $config['api']['api_key'] !== 'YOUR_API_KEY_HERE';
-$config['api']['api_key_display'] = $apiKeySet ? '••••••••' . substr($config['api']['api_key'], -4) : '';
+$config['api']['api_key_display'] = $apiKeySet ? '••••••••' . mb_substr($config['api']['api_key'], -4, null, 'UTF-8') : '';
 unset($config['api']['api_key']);
 
 // Remove password hash from frontend

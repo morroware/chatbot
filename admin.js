@@ -104,57 +104,62 @@ function populateForms() {
     renderEmotionThemeMappings();
 }
 
+function escapeAttrValue(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function renderEmotions() {
     const container = document.getElementById('emotionsList');
     container.innerHTML = '';
-    
+
     Object.keys(emotionsData).forEach(key => {
         const emotion = emotionsData[key];
+        const safeKey = escapeAttrValue(key);
         const div = document.createElement('div');
         div.className = 'emotion-item';
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 style="color: ${emotion.color}">${emotion.emoji} ${key}</h5>
-                <button type="button" class="btn btn-remove" onclick="removeEmotion('${key}')">Remove</button>
+                <h5 style="color: ${escapeAttrValue(emotion.color)}">${emotion.emoji} ${safeKey}</h5>
+                <button type="button" class="btn btn-remove" data-remove-emotion="${safeKey}">Remove</button>
             </div>
             <div class="row">
                 <div class="col-md-6">
                     <label class="form-label">Label</label>
-                    <input type="text" class="form-control" data-emotion="${key}" data-field="label" value="${emotion.label || ''}">
+                    <input type="text" class="form-control" data-emotion="${safeKey}" data-field="label" value="${escapeAttrValue(emotion.label || '')}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Emoji</label>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-outline-secondary emoji-preview" style="font-size: 2rem; padding: 0.5rem 1rem; min-width: 60px;" onclick="openEmojiPicker('${key}')">${emotion.emoji || '😀'}</button>
-                        <input type="text" class="form-control emoji-input" data-emotion="${key}" data-field="emoji" value="${emotion.emoji || ''}" readonly style="flex: 1;">
+                        <button type="button" class="btn btn-outline-secondary emoji-preview" style="font-size: 2rem; padding: 0.5rem 1rem; min-width: 60px;" data-emoji-picker="${safeKey}">${emotion.emoji || '😀'}</button>
+                        <input type="text" class="form-control emoji-input" data-emotion="${safeKey}" data-field="emoji" value="${escapeAttrValue(emotion.emoji || '')}" readonly style="flex: 1;">
                     </div>
                 </div>
             </div>
             <label class="form-label">Description</label>
-            <input type="text" class="form-control" data-emotion="${key}" data-field="description" value="${emotion.description || ''}">
-            
+            <input type="text" class="form-control" data-emotion="${safeKey}" data-field="description" value="${escapeAttrValue(emotion.description || '')}">
+
             <div class="row">
                 <div class="col-md-4">
                     <label class="form-label">Color</label>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="color" class="form-control color-picker" data-emotion="${key}" data-field="color" value="${emotion.color || '#ffffff'}" style="width: 80px; height: 45px; padding: 2px;">
-                        <input type="text" class="form-control color-text" data-emotion="${key}" data-field="color" value="${emotion.color || '#ffffff'}" style="flex: 1;">
+                        <input type="color" class="form-control color-picker" data-emotion="${safeKey}" data-field="color" value="${escapeAttrValue(emotion.color || '#ffffff')}" style="width: 80px; height: 45px; padding: 2px;">
+                        <input type="text" class="form-control color-text" data-emotion="${safeKey}" data-field="color" value="${escapeAttrValue(emotion.color || '#ffffff')}" style="flex: 1;">
                     </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Filter</label>
-                    <input type="text" class="form-control" data-emotion="${key}" data-field="filter" value="${emotion.filter || 'brightness(1.0)'}">
+                    <input type="text" class="form-control" data-emotion="${safeKey}" data-field="filter" value="${escapeAttrValue(emotion.filter || 'brightness(1.0)')}">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Shake</label>
-                    <select class="form-select" data-emotion="${key}" data-field="shake">
+                    <select class="form-select" data-emotion="${safeKey}" data-field="shake">
                         <option value="false" ${!emotion.shake || emotion.shake === 'false' ? 'selected' : ''}>No</option>
                         <option value="true" ${emotion.shake === 'true' || emotion.shake === true ? 'selected' : ''}>Yes</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Glow</label>
-                    <select class="form-select" data-emotion="${key}" data-field="glow">
+                    <select class="form-select" data-emotion="${safeKey}" data-field="glow">
                         <option value="false" ${!emotion.glow || emotion.glow === 'false' ? 'selected' : ''}>No</option>
                         <option value="true" ${emotion.glow === 'true' || emotion.glow === true ? 'selected' : ''}>Yes</option>
                     </select>
@@ -163,7 +168,15 @@ function renderEmotions() {
         `;
         container.appendChild(div);
     });
-    
+
+    // Attach event listeners via delegation instead of inline onclick
+    container.querySelectorAll('[data-remove-emotion]').forEach(btn => {
+        btn.addEventListener('click', () => removeEmotion(btn.dataset.removeEmotion));
+    });
+    container.querySelectorAll('[data-emoji-picker]').forEach(btn => {
+        btn.addEventListener('click', () => openEmojiPicker(btn.dataset.emojiPicker));
+    });
+
     // Sync color pickers with text inputs
     syncColorInputs();
 }
@@ -174,62 +187,68 @@ function renderThemes() {
     
     Object.keys(themesData).forEach(key => {
         const theme = themesData[key];
+        const safeKey = escapeAttrValue(key);
         const div = document.createElement('div');
         div.className = 'theme-item';
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 style="color: ${theme.primary_color}">${theme.name}</h5>
-                <button type="button" class="btn btn-remove" onclick="removeTheme('${key}')">Remove</button>
+                <h5 style="color: ${escapeAttrValue(theme.primary_color)}">${escapeAttrValue(theme.name)}</h5>
+                <button type="button" class="btn btn-remove" data-remove-theme="${safeKey}">Remove</button>
             </div>
             <div class="row">
                 <div class="col-md-6">
                     <label class="form-label">Theme Name</label>
-                    <input type="text" class="form-control" data-theme="${key}" data-field="name" value="${theme.name || ''}">
+                    <input type="text" class="form-control" data-theme="${safeKey}" data-field="name" value="${escapeAttrValue(theme.name || '')}">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Description</label>
-                    <input type="text" class="form-control" data-theme="${key}" data-field="description" value="${theme.description || ''}">
+                    <input type="text" class="form-control" data-theme="${safeKey}" data-field="description" value="${escapeAttrValue(theme.description || '')}">
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-3">
                     <label class="form-label">Primary Color</label>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="color" class="form-control color-picker" data-theme="${key}" data-field="primary_color" value="${theme.primary_color || '#ffffff'}" style="width: 60px; height: 45px; padding: 2px;">
-                        <input type="text" class="form-control color-text" data-theme="${key}" data-field="primary_color" value="${theme.primary_color || '#ffffff'}" style="flex: 1;">
+                        <input type="color" class="form-control color-picker" data-theme="${safeKey}" data-field="primary_color" value="${escapeAttrValue(theme.primary_color || '#ffffff')}" style="width: 60px; height: 45px; padding: 2px;">
+                        <input type="text" class="form-control color-text" data-theme="${safeKey}" data-field="primary_color" value="${escapeAttrValue(theme.primary_color || '#ffffff')}" style="flex: 1;">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Secondary Color</label>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="color" class="form-control color-picker" data-theme="${key}" data-field="secondary_color" value="${theme.secondary_color || '#eeeeee'}" style="width: 60px; height: 45px; padding: 2px;">
-                        <input type="text" class="form-control color-text" data-theme="${key}" data-field="secondary_color" value="${theme.secondary_color || '#eeeeee'}" style="flex: 1;">
+                        <input type="color" class="form-control color-picker" data-theme="${safeKey}" data-field="secondary_color" value="${escapeAttrValue(theme.secondary_color || '#eeeeee')}" style="width: 60px; height: 45px; padding: 2px;">
+                        <input type="text" class="form-control color-text" data-theme="${safeKey}" data-field="secondary_color" value="${escapeAttrValue(theme.secondary_color || '#eeeeee')}" style="flex: 1;">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Accent Color</label>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="color" class="form-control color-picker" data-theme="${key}" data-field="accent_color" value="${theme.accent_color || '#dddddd'}" style="width: 60px; height: 45px; padding: 2px;">
-                        <input type="text" class="form-control color-text" data-theme="${key}" data-field="accent_color" value="${theme.accent_color || '#dddddd'}" style="flex: 1;">
+                        <input type="color" class="form-control color-picker" data-theme="${safeKey}" data-field="accent_color" value="${escapeAttrValue(theme.accent_color || '#dddddd')}" style="width: 60px; height: 45px; padding: 2px;">
+                        <input type="text" class="form-control color-text" data-theme="${safeKey}" data-field="accent_color" value="${escapeAttrValue(theme.accent_color || '#dddddd')}" style="flex: 1;">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Background Color</label>
                     <div class="d-flex align-items-center gap-2">
-                        <input type="color" class="form-control color-picker" data-theme="${key}" data-field="background_color" value="${theme.background_color || '#cccccc'}" style="width: 60px; height: 45px; padding: 2px;">
-                        <input type="text" class="form-control color-text" data-theme="${key}" data-field="background_color" value="${theme.background_color || '#cccccc'}" style="flex: 1;">
+                        <input type="color" class="form-control color-picker" data-theme="${safeKey}" data-field="background_color" value="${escapeAttrValue(theme.background_color || '#cccccc')}" style="width: 60px; height: 45px; padding: 2px;">
+                        <input type="text" class="form-control color-text" data-theme="${safeKey}" data-field="background_color" value="${escapeAttrValue(theme.background_color || '#cccccc')}" style="flex: 1;">
                     </div>
                 </div>
             </div>
             <label class="form-label">Header Gradient</label>
-            <input type="text" class="form-control" data-theme="${key}" data-field="header_gradient" value="${theme.header_gradient || 'linear-gradient(135deg, #ffffff 0%, #eeeeee 100%)'}">
-            
+            <input type="text" class="form-control" data-theme="${safeKey}" data-field="header_gradient" value="${escapeAttrValue(theme.header_gradient || 'linear-gradient(135deg, #ffffff 0%, #eeeeee 100%)')}">
+
             <label class="form-label">Avatar Filter</label>
-            <input type="text" class="form-control" data-theme="${key}" data-field="avatar_filter" value="${theme.avatar_filter || 'brightness(1.0)'}">
+            <input type="text" class="form-control" data-theme="${safeKey}" data-field="avatar_filter" value="${escapeAttrValue(theme.avatar_filter || 'brightness(1.0)')}">
         `;
         container.appendChild(div);
     });
-    
+
+    // Attach event listeners via delegation instead of inline onclick
+    container.querySelectorAll('[data-remove-theme]').forEach(btn => {
+        btn.addEventListener('click', () => removeTheme(btn.dataset.removeTheme));
+    });
+
     // Sync color pickers with text inputs
     syncColorInputs();
 }
@@ -617,7 +636,13 @@ async function saveConfig(file, content) {
 
 function showMessage(message, type) {
     const messageArea = document.getElementById('messageArea');
-    messageArea.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    const allowedTypes = ['success', 'danger', 'warning', 'info'];
+    const safeType = allowedTypes.includes(type) ? type : 'info';
+    const div = document.createElement('div');
+    div.className = `alert alert-${safeType}`;
+    div.textContent = message;
+    messageArea.innerHTML = '';
+    messageArea.appendChild(div);
     setTimeout(() => {
         messageArea.innerHTML = '';
     }, 5000);
@@ -736,11 +761,11 @@ function openEmojiPicker(emotionKey) {
         content.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 style="color: #ff6b35; margin: 0;">Select Emoji</h3>
-                <button onclick="closeEmojiPicker()" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 1.2rem;">✕</button>
+                <button id="emojiPickerClose" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 1.2rem;">&#10005;</button>
             </div>
             <div id="emojiGrid" style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.5rem;">
                 ${COMMON_EMOJIS.map(emoji => `
-                    <button class="emoji-btn" onclick="selectEmoji('${emoji}')" style="
+                    <button class="emoji-btn" data-emoji="${emoji}" style="
                         background: rgba(0, 0, 0, 0.3);
                         border: 1px solid rgba(255, 107, 53, 0.3);
                         border-radius: 8px;
@@ -748,15 +773,22 @@ function openEmojiPicker(emotionKey) {
                         font-size: 1.8rem;
                         cursor: pointer;
                         transition: all 0.2s;
-                    " onmouseover="this.style.background='rgba(255, 107, 53, 0.3)'; this.style.transform='scale(1.2)'" onmouseout="this.style.background='rgba(0, 0, 0, 0.3)'; this.style.transform='scale(1)'">${emoji}</button>
+                    ">${emoji}</button>
                 `).join('')}
             </div>
         `;
-        
+
         modal.appendChild(content);
         document.body.appendChild(modal);
+
+        // Attach event listeners
+        document.getElementById('emojiPickerClose').addEventListener('click', closeEmojiPicker);
+        document.getElementById('emojiGrid').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-emoji]');
+            if (btn) selectEmoji(btn.dataset.emoji);
+        });
     }
-    
+
     modal.style.display = 'flex';
 }
 

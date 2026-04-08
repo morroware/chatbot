@@ -455,8 +455,8 @@ function autoTitleConversation($conversationId, $firstMessage) {
     $title = preg_replace('/\s+/', ' ', $title);
     $title = trim($title);
 
-    if (strlen($title) > 60) {
-        $title = substr($title, 0, 57) . '...';
+    if (mb_strlen($title, 'UTF-8') > 60) {
+        $title = mb_substr($title, 0, 57, 'UTF-8') . '...';
     }
 
     if (!empty($title)) {
