@@ -1,12 +1,14 @@
 <?php
 /**
  * Streaming API Endpoint for Chatbot
- * Supports Server-Sent Events (SSE) for real-time response streaming
+ * Supports: SSE streaming, multi-model, memory injection, token tracking, conversation persistence
  */
 
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
+
+require_once __DIR__ . '/db.php';
 
 // ============================================
 // SSE HEADERS
@@ -14,14 +16,12 @@ ini_set('display_errors', 0);
 header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache');
 header('Connection: keep-alive');
-header('X-Accel-Buffering: no'); // Disable nginx buffering
+header('X-Accel-Buffering: no');
 
-// Flush any existing output buffers
 while (ob_get_level()) {
     ob_end_flush();
 }
 
-// Helper to send SSE events
 function sendEvent($event, $data) {
     echo "event: {$event}\n";
     echo "data: " . json_encode($data) . "\n\n";
@@ -38,24 +38,24 @@ function sendError($message, $code = 'ERROR') {
 // ============================================
 function checkRateLimit() {
     $now = time();
-    $limit = 10;
+    $limit = 15;
     $window = 60;
-    
+
     if (!isset($_SESSION['api_requests'])) {
         $_SESSION['api_requests'] = [];
     }
-    
+
     $_SESSION['api_requests'] = array_filter(
-        $_SESSION['api_requests'], 
+        $_SESSION['api_requests'],
         function($timestamp) use ($now, $window) {
             return ($now - $timestamp) < $window;
         }
     );
-    
+
     if (count($_SESSION['api_requests']) >= $limit) {
         return false;
     }
-    
+
     $_SESSION['api_requests'][] = $now;
     return true;
 }
@@ -80,8 +80,8 @@ if (!$config || !$emotions || !$themes) {
 // ============================================
 $apiKey = trim($config['api']['api_key'] ?? '');
 
-if (empty($apiKey) || $apiKey === 'YOUR_API_KEY_HERE') {
-    sendError('API key not configured', 'API_KEY_MISSING');
+if (empty($apiKey) || $apiKey === 'YourKeyHere') {
+    sendError('API key not configured. Please add your API key in the admin panel.', 'API_KEY_MISSING');
 }
 
 // ============================================
@@ -99,66 +99,99 @@ if (!isset($data['messages']) && !isset($data['prompt'])) {
 }
 
 // ============================================
+// RESOLVE MODEL
+// ============================================
+$requestedModel = $data['model'] ?? $config['general']['model'] ?? 'claude-sonnet-4-6';
+
+// Check if it's a model key from our config
+if (isset($config['model_ids'][$requestedModel])) {
+    $modelId = $config['model_ids'][$requestedModel];
+} else {
+    $modelId = $requestedModel;
+}
+
+// Determine provider from model ID
+$provider = 'anthropic';
+if (strpos($modelId, 'gpt') === 0 || strpos($modelId, 'o1') === 0 || strpos($modelId, 'o3') === 0) {
+    $provider = 'openai';
+}
+
+// ============================================
+// CONVERSATION PERSISTENCE
+// ============================================
+$conversationId = $data['conversation_id'] ?? null;
+
+if ($conversationId) {
+    $conversation = getConversation($conversationId);
+    if (!$conversation) {
+        $conversationId = createConversation('New Chat', $modelId);
+    }
+} else {
+    $conversationId = createConversation('New Chat', $modelId);
+}
+
+// ============================================
 // BUILD SYSTEM PROMPT
 // ============================================
 function buildSystemPrompt($config, $emotions, $themes) {
     $gen = $config['general'];
     $pers = $config['personality'];
-    
+
     $baseDesc = str_replace(
         ['{bot_name}', '{bot_description}'],
         [$gen['bot_name'], $gen['bot_description']],
         $pers['base_description']
     );
-    
+
     $emotionList = [];
     foreach ($emotions as $key => $emotion) {
         $emotionList[] = "- **{$key}** ({$emotion['emoji']} {$emotion['label']}): {$emotion['description']}";
     }
     $emotionText = implode("\n", $emotionList);
-    
+
     $themeList = [];
     foreach ($themes as $key => $theme) {
         $themeList[] = "- **{$key}**: {$theme['description']}";
     }
     $themeText = implode("\n", $themeList);
-    
+
     $examples = explode('|', $pers['trait_examples']);
     $exampleText = '';
     foreach ($examples as $example) {
-        $exampleText .= "- \"$example\"\n";
+        $exampleText .= "- $example\n";
     }
-    
+
     $emotionThemeHints = '';
     if (isset($config['emotion_theme_map']) && is_array($config['emotion_theme_map'])) {
-        $emotionThemeHints = "\n\nEMOTION-THEME PAIRINGS:\n";
+        $emotionThemeHints = "\nEMOTION-THEME PAIRINGS:\n";
         foreach ($config['emotion_theme_map'] as $emotionKey => $themeKey) {
             if (isset($emotions[$emotionKey]) && isset($themes[$themeKey])) {
                 $emotionThemeHints .= "- {$emotionKey} → {$themeKey}\n";
             }
         }
     }
-    
+
+    // Inject memory context
+    $memoryContext = buildMemoryContext();
+
     $prompt = <<<EOT
-$baseDesc {$pers['speaking_style']}
+$baseDesc
+
+{$pers['speaking_style']}
 
 Your personality: {$pers['special_trait']}
 
-{$pers['formatting_note']} Examples:
+Behavioral examples:
 $exampleText
 
-FORMATTING GUIDELINES:
-- Use **bold** for emphasis
-- Use `code blocks` for technical terms
-- Use tables, bullet points, numbered lists as needed
-- Use > blockquotes for quotes
-- {$pers['brevity_note']}
-
+{$pers['formatting_note']}
+{$pers['brevity_note']}
+$memoryContext
 ═══════════════════════════════════════════════════════════════
-🎭 CRITICAL INSTRUCTION - EMOTION AND THEME TAGS 🎭
+EMOTION AND THEME TAGS (REQUIRED)
 ═══════════════════════════════════════════════════════════════
 
-You MUST end EVERY response with TWO special lines:
+You MUST end EVERY response with TWO tags on their own lines:
 
 [THEME: theme_name]
 [EMOTION: emotion_name]
@@ -170,31 +203,36 @@ AVAILABLE THEMES:
 $themeText
 $emotionThemeHints
 
-IMPORTANT: These tags are REQUIRED for EVERY response.
+RULES:
+1. Match EMOTION to your current feeling about the conversation
+2. Match THEME to the mood/atmosphere
+3. Change emotions naturally as the conversation evolves
+4. These tags are REQUIRED on every response - the UI depends on them
+5. Tags must be the LAST two lines of your response
 EOT;
-    
+
     return $prompt;
 }
 
 // ============================================
-// CONTEXT MANAGEMENT - Summarize old messages
+// CONTEXT MANAGEMENT
 // ============================================
-function manageContext($messages, $maxMessages = 20, $config) {
+function manageContext($messages, $config) {
+    $maxMessages = intval($config['general']['max_context_messages'] ?? 20);
+    $recentToKeep = intval($config['general']['recent_messages_to_keep'] ?? 10);
+
     if (count($messages) <= $maxMessages) {
         return $messages;
     }
-    
-    // Keep the most recent messages
-    $recentCount = 10;
-    $recentMessages = array_slice($messages, -$recentCount);
-    $oldMessages = array_slice($messages, 0, -$recentCount);
-    
-    // Create a summary of old messages
+
+    $recentMessages = array_slice($messages, -$recentToKeep);
+    $oldMessages = array_slice($messages, 0, -$recentToKeep);
+
     $summaryParts = [];
     foreach ($oldMessages as $msg) {
-        $role = $msg['role'] === 'user' ? 'User' : $config['general']['bot_name'];
+        $role = $msg['role'] === 'user' ? 'User' : ($config['general']['bot_name'] ?? 'Assistant');
         $content = '';
-        
+
         if (is_array($msg['content'])) {
             foreach ($msg['content'] as $part) {
                 if ($part['type'] === 'text') {
@@ -207,27 +245,24 @@ function manageContext($messages, $maxMessages = 20, $config) {
         } else {
             $content = $msg['content'];
         }
-        
-        // Truncate long messages in summary
-        if (strlen($content) > 150) {
-            $content = substr($content, 0, 150) . '...';
+
+        if (strlen($content) > 200) {
+            $content = substr($content, 0, 200) . '...';
         }
-        
+
         $summaryParts[] = "{$role}: {$content}";
     }
-    
+
     $summaryText = implode("\n", $summaryParts);
-    
-    // Create a context summary message
+
     $contextMessage = [
         'role' => 'user',
         'content' => [[
             'type' => 'text',
-            'text' => "[CONVERSATION CONTEXT - Earlier in our conversation:\n{$summaryText}\n\nPlease continue our conversation naturally, keeping this context in mind.]"
+            'text' => "[CONVERSATION CONTEXT - Earlier messages:\n{$summaryText}\n\nContinue naturally.]"
         ]]
     ];
-    
-    // Insert context summary followed by recent messages
+
     return array_merge([$contextMessage], $recentMessages);
 }
 
@@ -245,52 +280,69 @@ if (isset($data['messages']) && is_array($data['messages'])) {
     $messages = $data['messages'];
 } else {
     $content = [];
-    
+
     if (isset($data['image'])) {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        $imageType = $data['imageType'] ?? 'image/jpeg';
-        
-        if (!in_array($imageType, $allowedTypes)) {
+        $imgType = $data['imageType'] ?? 'image/jpeg';
+
+        if (!in_array($imgType, $allowedTypes)) {
             sendError('Invalid image type', 'INVALID_IMAGE_TYPE');
         }
-        
+
         $content[] = [
             'type' => 'image',
             'source' => [
                 'type' => 'base64',
-                'media_type' => $imageType,
+                'media_type' => $imgType,
                 'data' => $data['image']
             ]
         ];
     }
-    
+
     $content[] = ['type' => 'text', 'text' => $data['prompt']];
     $messages[] = ['role' => 'user', 'content' => $content];
 }
 
+// Save user message to database
+$lastUserMessage = end($messages);
+if ($lastUserMessage && $lastUserMessage['role'] === 'user') {
+    $userMsgId = addMessage($conversationId, 'user', $lastUserMessage['content']);
+
+    // Auto-title from first message
+    $conv = getConversation($conversationId);
+    if ($conv && $conv['message_count'] <= 1) {
+        autoTitleConversation($conversationId, $lastUserMessage['content']);
+    }
+}
+
 // Apply context management
-$messages = manageContext($messages, 20, $config);
+$messages = manageContext($messages, $config);
 
 // ============================================
 // PREPARE STREAMING API REQUEST
 // ============================================
 $systemPrompt = buildSystemPrompt($config, $emotions, $themes);
+$temperature = floatval($data['temperature'] ?? $config['general']['temperature'] ?? 0.7);
 
 $requestData = [
-    'model' => $config['general']['model'],
-    'max_tokens' => (int)$config['general']['max_tokens'],
+    'model' => $modelId,
+    'max_tokens' => (int)($data['max_tokens'] ?? $config['general']['max_tokens'] ?? 4096),
     'system' => $systemPrompt,
     'messages' => $messages,
-    'stream' => true  // Enable streaming
+    'stream' => true,
+    'temperature' => $temperature
 ];
 
 // ============================================
 // MAKE STREAMING API CALL
 // ============================================
-$ch = curl_init($config['api']['endpoint']);
+$endpoint = $config['api']['endpoint'];
+$ch = curl_init($endpoint);
 
 $fullResponse = '';
 $buffer = '';
+$inputTokens = 0;
+$outputTokens = 0;
 
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
@@ -304,19 +356,17 @@ curl_setopt_array($ch, [
     CURLOPT_TIMEOUT => 120,
     CURLOPT_CONNECTTIMEOUT => 10,
     CURLOPT_RETURNTRANSFER => false,
-    CURLOPT_WRITEFUNCTION => function($ch, $data) use (&$fullResponse, &$buffer, $emotions, $themes, $config) {
+    CURLOPT_WRITEFUNCTION => function($ch, $data) use (&$fullResponse, &$buffer, &$inputTokens, &$outputTokens, $emotions, $themes, $config, $conversationId, $modelId) {
         $buffer .= $data;
-        
-        // Process complete SSE events
+
         while (($pos = strpos($buffer, "\n\n")) !== false) {
             $event = substr($buffer, 0, $pos);
             $buffer = substr($buffer, $pos + 2);
-            
-            // Parse the event
+
             $lines = explode("\n", $event);
             $eventType = '';
             $eventData = '';
-            
+
             foreach ($lines as $line) {
                 if (strpos($line, 'event: ') === 0) {
                     $eventType = trim(substr($line, 7));
@@ -324,25 +374,27 @@ curl_setopt_array($ch, [
                     $eventData = substr($line, 6);
                 }
             }
-            
+
             if ($eventData) {
                 $parsed = json_decode($eventData, true);
-                
+
                 if ($parsed) {
-                    // Handle different event types
+                    // Track token usage from message_start
+                    if ($eventType === 'message_start' && isset($parsed['message']['usage'])) {
+                        $inputTokens = $parsed['message']['usage']['input_tokens'] ?? 0;
+                    }
+
                     if ($eventType === 'content_block_delta' && isset($parsed['delta']['text'])) {
                         $text = $parsed['delta']['text'];
                         $fullResponse .= $text;
-                        
-                        // Send chunk to client (but filter out emotion/theme tags from display)
-                        // We'll extract them at the end
                         sendEvent('chunk', ['text' => $text]);
+                    } elseif ($eventType === 'message_delta' && isset($parsed['usage'])) {
+                        $outputTokens = $parsed['usage']['output_tokens'] ?? 0;
                     } elseif ($eventType === 'message_stop') {
-                        // Message complete - extract emotion and theme
                         $theme = $config['general']['default_theme'];
                         $emotion = $config['general']['default_emotion'];
                         $cleanText = $fullResponse;
-                        
+
                         if (preg_match('/\[THEME:\s*(\w+)\]/i', $cleanText, $matches)) {
                             $extracted = strtolower($matches[1]);
                             if (isset($themes[$extracted])) {
@@ -350,7 +402,7 @@ curl_setopt_array($ch, [
                             }
                             $cleanText = preg_replace('/\[THEME:\s*\w+\]/i', '', $cleanText);
                         }
-                        
+
                         if (preg_match('/\[EMOTION:\s*(\w+)\]/i', $cleanText, $matches)) {
                             $extracted = strtolower($matches[1]);
                             if (isset($emotions[$extracted])) {
@@ -358,11 +410,29 @@ curl_setopt_array($ch, [
                             }
                             $cleanText = preg_replace('/\[EMOTION:\s*\w+\]/i', '', $cleanText);
                         }
-                        
+
+                        $cleanText = trim($cleanText);
+
+                        // Save assistant message to database
+                        addMessage($conversationId, 'assistant', $cleanText, [
+                            'emotion' => $emotion,
+                            'theme' => $theme,
+                            'tokens_in' => $inputTokens,
+                            'tokens_out' => $outputTokens,
+                            'model' => $modelId
+                        ]);
+
                         sendEvent('done', [
                             'emotion' => $emotion,
                             'theme' => $theme,
-                            'fullText' => trim($cleanText)
+                            'fullText' => $cleanText,
+                            'conversation_id' => $conversationId,
+                            'tokens' => [
+                                'input' => $inputTokens,
+                                'output' => $outputTokens,
+                                'total' => $inputTokens + $outputTokens
+                            ],
+                            'model' => $modelId
                         ]);
                     } elseif ($eventType === 'error' || isset($parsed['error'])) {
                         sendEvent('error', [
@@ -373,7 +443,7 @@ curl_setopt_array($ch, [
                 }
             }
         }
-        
+
         return strlen($data);
     }
 ]);
@@ -390,4 +460,3 @@ if ($curlError) {
 if ($httpCode !== 200 && empty($fullResponse)) {
     sendError('API returned status ' . $httpCode, 'API_ERROR_' . $httpCode);
 }
-?>

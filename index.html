@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -7,9 +7,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" id="appTitle" content="Chatbot">
     <meta name="theme-color" content="#6366f1" id="themeColor">
-    <meta name="description" id="metaDescription" content="Chat with AI - powered by Claude">
-    <title id="pageTitle">Chatbot</title>
+    <meta name="description" id="metaDescription" content="AI Chatbot Platform">
+    <title id="pageTitle">AI Chat</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="manifest" href="manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <link rel="stylesheet" href="styles.css">
@@ -18,75 +19,193 @@
 </head>
 <body>
     <div class="app-container">
-        <div class="app-wrapper">
-            <div class="card shadow-lg">
-                <!-- Compact Mobile Header -->
-                <div class="card-header bg-primary text-white">
-                    <div class="header-content">
-                        <div class="header-main">
-                            <img id="headerAvatar" src="" alt="Bot" class="avatar-header">
-                            <div class="header-text">
-                                <h2 class="header-title" id="headerTitle">Loading...</h2>
-                                <p class="emotion-indicator" id="emotionIndicator">
-                                    <span id="botNameEmotion">Bot</span>: <span id="currentEmotion">loading</span>
-                                </p>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="btn-new-chat" id="newChatBtn" title="New Chat (Ctrl+N)">
+                    <span class="icon">+</span> New Chat
+                </button>
+                <button class="btn-sidebar-close" id="sidebarCloseBtn" title="Close sidebar">&#x2715;</button>
+            </div>
+
+            <div class="sidebar-search">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search conversations..." autocomplete="off">
+            </div>
+
+            <div class="sidebar-conversations" id="conversationList">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-row">
+                    <button class="btn-sidebar-action" id="memoryBtn" title="Memory & Facts">
+                        <span class="icon">&#128065;</span> Memory
+                    </button>
+                    <button class="btn-sidebar-action" id="settingsToggle" title="Settings">
+                        <span class="icon">&#9881;</span>
+                    </button>
+                </div>
+                <div class="sidebar-stats" id="sidebarStats"></div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-content" id="mainContent">
+            <div class="app-wrapper">
+                <div class="card shadow-lg">
+                    <!-- Header -->
+                    <div class="card-header bg-primary text-white">
+                        <div class="header-content">
+                            <div class="header-left">
+                                <button class="btn-hamburger" id="sidebarToggle" title="Toggle sidebar (Ctrl+B)">
+                                    <span></span><span></span><span></span>
+                                </button>
+                                <img id="headerAvatar" src="" alt="Bot" class="avatar-header">
+                                <div class="header-text">
+                                    <h2 class="header-title" id="headerTitle">Loading...</h2>
+                                    <p class="emotion-indicator" id="emotionIndicator">
+                                        <span id="botNameEmotion">Bot</span>: <span id="currentEmotion">loading</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="header-right">
+                                <!-- Model Selector -->
+                                <select class="model-selector" id="modelSelector" title="Select AI model">
+                                </select>
+
+                                <!-- Dark/Light Mode Toggle -->
+                                <button class="btn-icon-header" id="darkModeToggle" title="Toggle dark/light mode (Ctrl+D)">
+                                    <span id="darkModeIcon">&#9790;</span>
+                                </button>
+
+                                <!-- Theme Switcher -->
+                                <div class="theme-switcher-header" id="themeSwitcher">
+                                    <button class="btn-icon-header" onclick="toggleThemeMenu()" title="Change theme">
+                                        &#127912;
+                                    </button>
+                                    <div class="theme-menu" id="themeMenu" style="display: none;">
+                                        <div class="theme-menu-header">Themes</div>
+                                        <div id="themeOptions"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Token Counter -->
+                                <div class="token-counter" id="tokenCounter" title="Token usage this session">
+                                    <span class="token-icon">&#9889;</span>
+                                    <span id="tokenCount">0</span>
+                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Compact Theme Switcher -->
-                        <div class="theme-switcher-header" id="themeSwitcher">
-                            <button class="btn-theme-toggle" onclick="toggleThemeMenu()" title="Change theme" aria-label="Change theme">
-                                🎨
-                            </button>
-                            <div class="theme-menu" id="themeMenu" style="display: none;">
-                                <div class="theme-menu-header">Theme</div>
-                                <div id="themeOptions"></div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div id="chatContainer" class="chat-container" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+                            <div class="welcome-message" id="welcomeMessage">
+                                <img id="welcomeAvatar" src="" alt="Bot" class="avatar-large">
+                                <h4 id="welcomeTitle">Loading...</h4>
+                                <p id="welcomeText">Please wait...</p>
+                                <div class="suggested-prompts" id="suggestedPrompts">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Drag overlay -->
+                            <div class="drag-overlay" id="dragOverlay">
+                                <div class="drag-content">
+                                    <span class="drag-icon">&#128206;</span>
+                                    <p>Drop image here</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typing Indicator -->
+                        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                            <img id="typingAvatar" src="" alt="" class="avatar-typing">
+                            <div class="typing-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <div class="input-area">
+                            <div id="imagePreviewContainer" class="image-preview-container d-none">
+                                <div class="image-preview-wrapper">
+                                    <img id="imagePreview" src="" alt="Preview">
+                                    <button type="button" class="btn-close-preview" id="removeImage" aria-label="Remove image">&times;</button>
+                                </div>
+                                <div class="image-stats" id="imageStats"></div>
+                            </div>
+
+                            <div class="input-controls">
+                                <input type="file" id="imageUpload" accept="image/*" class="d-none">
+                                <button type="button" class="btn btn-outline-secondary btn-icon" id="imageUploadBtn" title="Upload image (Ctrl+U)">&#128247;</button>
+                                <button type="button" class="btn btn-outline-secondary btn-icon" id="voiceInputBtn" title="Voice input (Ctrl+M)">&#127908;</button>
+                                <textarea class="form-control message-input" id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+                                <button type="button" class="btn btn-primary btn-icon" id="sendBtn" title="Send (Enter)" aria-label="Send message">
+                                    <span id="sendIcon">&#10148;</span>
+                                    <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                                </button>
+                            </div>
+
+                            <div class="input-footer">
+                                <span class="input-hint" id="inputHint">Enter to send &bull; Shift+Enter for new line &bull; Ctrl+N new chat</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card-body p-0">
-                    <div id="chatContainer" class="chat-container">
-                        <div class="welcome-message">
-                            <img id="welcomeAvatar" src="" alt="Bot" class="avatar-large">
-                            <h4 id="welcomeTitle">Loading...</h4>
-                            <p id="welcomeMessage">Please wait...</p>
-                        </div>
-                    </div>
-
-                    <div class="input-area">
-                        <div id="imagePreviewContainer" class="image-preview-container d-none">
-                            <div class="image-preview-wrapper">
-                                <img id="imagePreview" src="" alt="Preview">
-                                <button type="button" class="btn-close-preview" id="removeImage" aria-label="Remove image">×</button>
-                            </div>
-                            <div class="image-stats" id="imageStats"></div>
-                        </div>
-
-                        <div class="input-controls">
-                            <input type="file" id="imageUpload" accept="image/*" class="d-none">
-                            <button type="button" class="btn btn-outline-secondary btn-icon" id="imageUploadBtn" title="Upload image" aria-label="Upload image">📷</button>
-                            <button type="button" class="btn btn-outline-secondary btn-icon" id="voiceInputBtn" title="Voice input" aria-label="Voice input">🎤</button>
-                            <input type="text" class="form-control message-input" id="messageInput" placeholder="Type a message..." autocomplete="off">
-                            <button type="button" class="btn btn-primary btn-icon" id="sendBtn" aria-label="Send message">
-                                <span id="sendIcon">➤</span>
-                                <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
-                            </button>
-                        </div>
-                    </div>
+                <div class="footer-credits">
+                    <small class="text-muted" id="footerText">Powered by AI</small>
                 </div>
             </div>
-            
-            <!-- Compact Footer -->
-            <div class="footer-credits">
-                <span class="footer-item">
-                    <small class="text-muted" id="footerText">Powered by AI</small>
-                </span>
-                <span class="footer-divider">•</span>
-                <button type="button" class="btn-footer" id="clearChat">Clear</button>
-                <span class="footer-divider">•</span>
-                <button type="button" class="btn-footer" id="exportChat">Export</button>
+        </main>
+
+        <!-- Memory Panel (overlay) -->
+        <div class="memory-panel" id="memoryPanel" style="display: none;">
+            <div class="memory-panel-header">
+                <h3>&#128065; Long-Term Memory</h3>
+                <button class="btn-close-panel" id="closeMemoryPanel">&times;</button>
+            </div>
+            <div class="memory-panel-body">
+                <p class="memory-description">Facts the bot remembers about you across conversations.</p>
+                <div class="memory-add">
+                    <input type="text" id="newMemoryInput" placeholder="Add a fact manually..." class="form-control">
+                    <select id="newMemoryType" class="form-select">
+                        <option value="general">General</option>
+                        <option value="preference">Preference</option>
+                        <option value="personal">Personal</option>
+                        <option value="interest">Interest</option>
+                        <option value="context">Context</option>
+                        <option value="style">Style</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" id="addMemoryBtn">Add</button>
+                </div>
+                <div class="memory-list" id="memoryList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Keyboard Shortcuts Modal -->
+        <div class="shortcuts-modal" id="shortcutsModal" style="display: none;">
+            <div class="shortcuts-content">
+                <div class="shortcuts-header">
+                    <h3>Keyboard Shortcuts</h3>
+                    <button class="btn-close-panel" id="closeShortcuts">&times;</button>
+                </div>
+                <div class="shortcuts-body">
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>New chat</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>B</kbd> <span>Toggle sidebar</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>D</kbd> <span>Toggle dark/light mode</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>K</kbd> <span>Search conversations</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>U</kbd> <span>Upload image</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>M</kbd> <span>Voice input</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>E</kbd> <span>Export chat</span></div>
+                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>/</kbd> <span>Show shortcuts</span></div>
+                    <div class="shortcut-item"><kbd>Enter</kbd> <span>Send message</span></div>
+                    <div class="shortcut-item"><kbd>Shift</kbd>+<kbd>Enter</kbd> <span>New line</span></div>
+                    <div class="shortcut-item"><kbd>Escape</kbd> <span>Close panels</span></div>
+                </div>
             </div>
         </div>
     </div>
