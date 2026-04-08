@@ -40,12 +40,25 @@ export const state = {
     // UI state
     sidebarOpen: true,
     memoryPanelOpen: false,
+    knowledgePanelOpen: false,
+    tasksPanelOpen: false,
 
     // Token tracking
-    sessionTokens: { input: 0, output: 0 },
+    sessionTokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 
     // Memory extraction tracking
     messagesSinceLastExtract: 0,
+
+    // Knowledge base
+    knowledgeFiles: [],
+
+    // Scheduled tasks
+    scheduledTasks: [],
+
+    // Feature flags (from config)
+    extendedThinking: false,
+    enableTools: true,
+    enableKB: true,
 };
 
 export const CONTEXT_CONFIG = {

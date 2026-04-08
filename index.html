@@ -41,6 +41,14 @@
                     <button class="btn-sidebar-action" id="memoryBtn" title="Memory & Facts">
                         <span class="icon">&#128065;</span> Memory
                     </button>
+                    <button class="btn-sidebar-action" id="knowledgeBtn" title="Knowledge Base (Ctrl+J)">
+                        <span class="icon">&#128218;</span> Docs
+                        <span class="sidebar-badge" id="kbBadge" style="display:none">0</span>
+                    </button>
+                    <button class="btn-sidebar-action" id="tasksBtn" title="Scheduled Tasks">
+                        <span class="icon">&#9200;</span> Tasks
+                        <span class="sidebar-badge" id="tasksBadge" style="display:none">0</span>
+                    </button>
                     <button class="btn-sidebar-action" id="settingsToggle" title="Settings">
                         <span class="icon">&#9881;</span>
                     </button>
@@ -149,6 +157,23 @@
 
                             <div class="input-footer">
                                 <span class="input-hint" id="inputHint">Enter to send &bull; Shift+Enter for new line &bull; Ctrl+N new chat</span>
+                                <div class="ai-feature-toggles">
+                                    <label class="feature-toggle" title="Extended thinking: Claude reasons more deeply (uses more tokens)">
+                                        <input type="checkbox" id="extendedThinkingToggle">
+                                        <span class="toggle-track"></span>
+                                        <span class="toggle-label" id="thinkingLabel">Deep thinking</span>
+                                    </label>
+                                    <label class="feature-toggle" title="Enable AI tools: web fetch, calculator, memory search, etc.">
+                                        <input type="checkbox" id="toolsToggle" checked>
+                                        <span class="toggle-track"></span>
+                                        <span class="toggle-label">Tools</span>
+                                    </label>
+                                    <label class="feature-toggle" title="Use knowledge base documents in responses">
+                                        <input type="checkbox" id="kbToggle" checked>
+                                        <span class="toggle-track"></span>
+                                        <span class="toggle-label">KB</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -183,6 +208,109 @@
                 <div class="memory-list" id="memoryList">
                     <!-- Populated by JS -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Panel -->
+        <div class="side-panel" id="knowledgePanel">
+            <div class="side-panel-header">
+                <h3>&#128218; Knowledge Base</h3>
+                <button class="btn-close-panel" id="closeKnowledge">&times;</button>
+            </div>
+            <div class="side-panel-body">
+                <p class="panel-description">Upload documents to give the AI context from your files. Supports PDF, DOCX, TXT, CSV, Markdown, JSON, HTML.</p>
+
+                <!-- Upload area -->
+                <div class="kb-upload-area" id="kbUploadArea">
+                    <div class="kb-upload-icon">&#128228;</div>
+                    <div class="kb-upload-text">Drop files here or click to upload</div>
+                    <div class="kb-upload-sub">PDF, DOCX, TXT, CSV, MD, JSON, HTML &bull; Max 20MB</div>
+                    <input type="file" id="kbFileInput" accept=".pdf,.docx,.doc,.txt,.md,.csv,.json,.html,.htm,.rtf" class="d-none">
+                </div>
+
+                <div class="kb-upload-meta">
+                    <input type="text" id="kbDescription" class="kb-input" placeholder="Description (optional)">
+                    <input type="text" id="kbTags" class="kb-input" placeholder="Tags (comma-separated, optional)">
+                    <button class="btn btn-primary btn-sm" id="kbUploadBtn">Upload File</button>
+                </div>
+
+                <!-- Progress bar -->
+                <div id="kbUploadProgress" style="display:none" class="kb-progress-wrapper">
+                    <div class="kb-progress-bar" id="kbProgressBar"></div>
+                </div>
+
+                <!-- Search -->
+                <div class="kb-search-wrapper">
+                    <input type="text" id="kbSearchInput" class="kb-input" placeholder="&#128269; Search knowledge base...">
+                </div>
+
+                <!-- File list -->
+                <div id="kbFileList" class="kb-file-list">
+                    <div class="kb-empty">
+                        <div class="kb-empty-icon">&#128218;</div>
+                        <div class="kb-empty-text">No documents yet</div>
+                        <div class="kb-empty-sub">Upload files to give AI context</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasks Panel -->
+        <div class="side-panel" id="tasksPanel">
+            <div class="side-panel-header">
+                <h3>&#9200; Scheduled Tasks</h3>
+                <button class="btn-close-panel" id="closeTasks">&times;</button>
+            </div>
+            <div class="side-panel-body">
+                <p class="panel-description">Create automated AI tasks on a schedule. Set up with cPanel cron: <code>php /path/to/scheduler.php</code></p>
+
+                <button class="btn btn-primary btn-sm mb-3" id="createTaskBtn" style="width:100%">+ Create New Task</button>
+
+                <!-- Task creation/edit form -->
+                <div id="taskForm" style="display:none" class="task-form">
+                    <h4 id="taskFormTitle">New Task</h4>
+                    <div class="task-form-fields">
+                        <input type="text" id="taskName" class="kb-input" placeholder="Task name *">
+                        <textarea id="taskDescription" class="kb-input" rows="2" placeholder="Description (optional)"></textarea>
+                        <textarea id="taskPrompt" class="kb-input" rows="3" placeholder="AI prompt (what should the AI do?) *"></textarea>
+                        <select id="taskScheduleType" class="kb-input">
+                            <option value="once">Once (specific time)</option>
+                            <option value="interval">Interval (every N minutes)</option>
+                            <option value="daily" selected>Daily (at a time)</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                        </select>
+                        <input type="text" id="taskScheduleValue" class="kb-input" placeholder="Schedule value">
+                        <div class="schedule-hint" id="scheduleValueHint"></div>
+                        <select id="taskModel" class="kb-input">
+                            <option value="">Default model</option>
+                        </select>
+                    </div>
+                    <div class="task-form-buttons">
+                        <button class="btn btn-secondary btn-sm" id="cancelTaskForm">Cancel</button>
+                        <button class="btn btn-primary btn-sm" id="saveTaskBtn">Create Task</button>
+                    </div>
+                </div>
+
+                <!-- Task list -->
+                <div id="taskList" class="task-list">
+                    <div class="kb-empty">
+                        <div class="kb-empty-icon">&#9200;</div>
+                        <div class="kb-empty-text">No tasks yet</div>
+                        <div class="kb-empty-sub">Tasks run automatically on schedule</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KB File Detail Modal -->
+        <div class="modal-overlay" id="kbDetailModal">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3>Document Details</h3>
+                    <button class="btn-close-panel" id="kbDetailClose">&times;</button>
+                </div>
+                <div class="modal-body" id="kbDetailBody"></div>
             </div>
         </div>
 

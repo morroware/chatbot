@@ -183,6 +183,9 @@ async function streamResponse(messageDiv, timestamp) {
     const response = await api.streamChat(managed, {
         conversationId: state.currentConversationId,
         model: state.currentModel,
+        extendedThinking: state.extendedThinking,
+        enableTools: state.enableTools,
+        enableKB: state.enableKB,
     });
 
     const reader = response.body.getReader();
@@ -270,6 +273,18 @@ function handleStreamEvent(eventType, data, messageDiv, timestamp) {
                 // Token tracking
                 if (data.tokens) updateTokenCount(data.tokens);
 
+                // KB/tool indicator
+                if (data.kb_chunks_used > 0 || data.tool_calls > 0) {
+                    const infoEl = document.createElement('div');
+                    infoEl.className = 'message-ai-info';
+                    const parts = [];
+                    if (data.kb_chunks_used > 0) parts.push(`📚 ${data.kb_chunks_used} KB chunks`);
+                    if (data.tool_calls > 0) parts.push(`🔧 ${data.tool_calls} tool${data.tool_calls > 1 ? 's' : ''}`);
+                    if (data.tokens?.cache_read > 0) parts.push(`⚡ cached`);
+                    infoEl.textContent = parts.join(' · ');
+                    messageDiv.querySelector('.message-content')?.appendChild(infoEl);
+                }
+
                 // Add message actions
                 addMessageActions(messageDiv, data.fullText || state.streamingTextBuffer, 'assistant');
 
@@ -292,6 +307,58 @@ function handleStreamEvent(eventType, data, messageDiv, timestamp) {
                 if (state.config?.general?.enable_suggested_replies === 'true') {
                     showSuggestedReplies(data.fullText || state.streamingTextBuffer);
                 }
+            }
+            break;
+
+        case 'tool_start':
+            if (messageDiv) {
+                let toolContainer = messageDiv.querySelector('.tool-calls');
+                if (!toolContainer) {
+                    toolContainer = document.createElement('div');
+                    toolContainer.className = 'tool-calls';
+                    messageDiv.querySelector('.message-content')?.prepend(toolContainer);
+                }
+                const toolEl = document.createElement('div');
+                toolEl.className = 'tool-call pending';
+                toolEl.dataset.toolId = data.id;
+                toolEl.innerHTML = `<span class="tool-icon">🔧</span> <span class="tool-name">${escapeHtml(data.tool)}</span> <span class="tool-status">calling…</span>`;
+                toolContainer.appendChild(toolEl);
+                if (chat) chat.scrollTop = chat.scrollHeight;
+            }
+            break;
+
+        case 'tool_running':
+            if (messageDiv) {
+                const runEl = messageDiv.querySelector(`[data-tool-id="${data.id}"]`);
+                if (runEl) runEl.querySelector('.tool-status').textContent = 'running…';
+            }
+            break;
+
+        case 'tool_result':
+            if (messageDiv) {
+                const resultEl = messageDiv.querySelector(`[data-tool-id="${data.id}"]`);
+                if (resultEl) {
+                    resultEl.classList.remove('pending');
+                    resultEl.classList.add('done');
+                    resultEl.querySelector('.tool-status').textContent = '✓ done';
+                    resultEl.title = data.result_preview || '';
+                }
+            }
+            break;
+
+        case 'thinking_start':
+            if (messageDiv) {
+                const thinkDiv = document.createElement('div');
+                thinkDiv.className = 'thinking-block';
+                thinkDiv.innerHTML = '<span class="thinking-label">💭 Thinking…</span><div class="thinking-text"></div>';
+                messageDiv.querySelector('.message-content')?.prepend(thinkDiv);
+            }
+            break;
+
+        case 'thinking_chunk':
+            if (messageDiv && data.text) {
+                const thinkText = messageDiv.querySelector('.thinking-text');
+                if (thinkText) thinkText.textContent += data.text;
             }
             break;
 

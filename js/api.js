@@ -151,6 +151,10 @@ export async function streamChat(messages, options = {}) {
         model: options.model || null,
         temperature: options.temperature || undefined,
         max_tokens: options.maxTokens || undefined,
+        extended_thinking: options.extendedThinking || false,
+        thinking_budget: options.thinkingBudget || undefined,
+        enable_tools: options.enableTools !== false,
+        enable_kb: options.enableKB !== false,
     };
 
     const response = await fetch('api-stream.php', {
@@ -164,4 +168,94 @@ export async function streamChat(messages, options = {}) {
     }
 
     return response;
+}
+
+// ============================================
+// KNOWLEDGE BASE
+// ============================================
+
+export async function fetchKnowledgeFiles() {
+    const res = await fetch('api-knowledge.php?action=list');
+    const data = await res.json();
+    return data.success ? data.files : [];
+}
+
+export async function uploadKnowledgeFile(file, description = '', tags = '') {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('action', 'upload');
+    if (description) formData.append('description', description);
+    if (tags) formData.append('tags', tags);
+    const res = await fetch('api-knowledge.php', { method: 'POST', body: formData });
+    return await res.json();
+}
+
+export async function deleteKnowledgeFile(id) {
+    const res = await fetch('api-knowledge.php?action=delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+    });
+    return await res.json();
+}
+
+export async function searchKnowledge(query, limit = 5) {
+    const res = await fetch(`api-knowledge.php?action=search&q=${encodeURIComponent(query)}&limit=${limit}`);
+    return await res.json();
+}
+
+// ============================================
+// SCHEDULED TASKS
+// ============================================
+
+export async function fetchTasks() {
+    const res = await fetch('api-tasks.php?action=list');
+    const data = await res.json();
+    return data.success ? data.tasks : [];
+}
+
+export async function createTask(taskData) {
+    const res = await fetch('api-tasks.php?action=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+    });
+    return await res.json();
+}
+
+export async function runTaskNow(id) {
+    const res = await fetch('api-tasks.php?action=run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+    });
+    return await res.json();
+}
+
+// ============================================
+// API TOKENS (admin only)
+// ============================================
+
+export async function fetchApiTokens() {
+    const res = await fetch('api-tokens.php?action=list');
+    const data = await res.json();
+    return data.success ? data.tokens : [];
+}
+
+export async function createApiToken(name, permissions, expiresDays, rateLimit) {
+    const res = await fetch('api-tokens.php?action=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, permissions, expires_days: expiresDays, rate_limit: rateLimit }),
+    });
+    return await res.json();
+}
+
+export async function revokeApiToken(id) {
+    const res = await fetch('api-tokens.php?action=revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+    });
+    return await res.json();
 }

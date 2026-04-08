@@ -8,10 +8,11 @@
     Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; media-src 'self'"
 </IfModule>
 
-# Protect data directory
+# Protect data directory (database, uploads)
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^data/ - [F,L]
+    RewriteRule ^data/.* - [F,L]
 </IfModule>
 
 # Protect config files from direct access
@@ -25,3 +26,25 @@
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# Protect lock file
+<FilesMatch "^scheduler\.lock$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# PHP upload settings (override per-directory for larger file uploads)
+<IfModule mod_php.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 120
+    php_value memory_limit 256M
+</IfModule>
+
+# Same for PHP 8.x via FPM (may need cPanel PHP settings instead)
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 20M
+    php_value post_max_size 22M
+    php_value max_execution_time 120
+    php_value memory_limit 256M
+</IfModule>

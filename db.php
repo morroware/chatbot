@@ -96,6 +96,128 @@ function initializeDatabase($db) {
         CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC);
         CREATE INDEX IF NOT EXISTS idx_conversations_pinned ON conversations(pinned DESC, updated_at DESC);
     ');
+
+    runMigrations($db);
+}
+
+function runMigrations($db) {
+    // Migration tracking table
+    $db->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )');
+
+    $applied = [];
+    $res = $db->query('SELECT version FROM schema_migrations');
+    while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+        $applied[] = $row['version'];
+    }
+
+    // Migration 1: Knowledge base, scheduled tasks, API tokens, tool calls, agent personas
+    if (!in_array(1, $applied)) {
+        $db->exec('
+            CREATE TABLE IF NOT EXISTS knowledge_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT NOT NULL,
+                original_name TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                chunk_count INTEGER DEFAULT 0,
+                status TEXT DEFAULT "ready",
+                description TEXT,
+                tags TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS knowledge_chunks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id INTEGER NOT NULL,
+                chunk_index INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                word_count INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES knowledge_files(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS scheduled_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                task_type TEXT NOT NULL DEFAULT "prompt",
+                prompt TEXT,
+                schedule_type TEXT NOT NULL DEFAULT "once",
+                schedule_value TEXT,
+                next_run TEXT,
+                last_run TEXT,
+                last_result TEXT,
+                run_count INTEGER DEFAULT 0,
+                enabled INTEGER DEFAULT 1,
+                model TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS api_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                permissions TEXT DEFAULT "chat",
+                last_used TEXT,
+                usage_count INTEGER DEFAULT 0,
+                enabled INTEGER DEFAULT 1,
+                expires_at TEXT,
+                rate_limit INTEGER DEFAULT 60,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS tool_calls (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INTEGER,
+                conversation_id TEXT,
+                tool_name TEXT NOT NULL,
+                tool_input TEXT,
+                tool_result TEXT,
+                duration_ms INTEGER,
+                success INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS agent_personas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT,
+                system_prompt TEXT,
+                model TEXT,
+                temperature REAL DEFAULT 0.7,
+                max_tokens INTEGER DEFAULT 4096,
+                avatar_url TEXT,
+                enabled INTEGER DEFAULT 1,
+                is_default INTEGER DEFAULT 0,
+                tools_enabled TEXT DEFAULT "[]",
+                kb_enabled INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS usage_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                stat_date TEXT NOT NULL,
+                model TEXT NOT NULL DEFAULT "unknown",
+                tokens_in INTEGER DEFAULT 0,
+                tokens_out INTEGER DEFAULT 0,
+                message_count INTEGER DEFAULT 0,
+                tool_calls_count INTEGER DEFAULT 0,
+                kb_queries INTEGER DEFAULT 0,
+                UNIQUE(stat_date, model)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_file ON knowledge_chunks(file_id, chunk_index);
+            CREATE INDEX IF NOT EXISTS idx_tool_calls_conv ON tool_calls(conversation_id);
+            CREATE INDEX IF NOT EXISTS idx_tasks_next_run ON scheduled_tasks(next_run, enabled);
+        ');
+        $db->exec("INSERT INTO schema_migrations (version) VALUES (1)");
+    }
 }
 
 // ============================================
@@ -470,6 +592,386 @@ function autoTitleConversation($conversationId, $firstMessage) {
     }
 
     return $title;
+}
+
+// ============================================
+// KNOWLEDGE BASE FUNCTIONS
+// ============================================
+
+function addKnowledgeFile($filename, $originalName, $fileType, $fileSize, $description = '', $tags = '') {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO knowledge_files (filename, original_name, file_type, file_size, description, tags)
+        VALUES (:filename, :original_name, :file_type, :file_size, :description, :tags)');
+    $stmt->bindValue(':filename', $filename, SQLITE3_TEXT);
+    $stmt->bindValue(':original_name', $originalName, SQLITE3_TEXT);
+    $stmt->bindValue(':file_type', $fileType, SQLITE3_TEXT);
+    $stmt->bindValue(':file_size', $fileSize, SQLITE3_INTEGER);
+    $stmt->bindValue(':description', $description, SQLITE3_TEXT);
+    $stmt->bindValue(':tags', $tags, SQLITE3_TEXT);
+    $stmt->execute();
+    return $db->lastInsertRowID();
+}
+
+function addKnowledgeChunk($fileId, $chunkIndex, $content) {
+    $db = getDB();
+    $wordCount = str_word_count($content);
+    $stmt = $db->prepare('INSERT INTO knowledge_chunks (file_id, chunk_index, content, word_count)
+        VALUES (:file_id, :chunk_index, :content, :word_count)');
+    $stmt->bindValue(':file_id', $fileId, SQLITE3_INTEGER);
+    $stmt->bindValue(':chunk_index', $chunkIndex, SQLITE3_INTEGER);
+    $stmt->bindValue(':content', $content, SQLITE3_TEXT);
+    $stmt->bindValue(':word_count', $wordCount, SQLITE3_INTEGER);
+    $stmt->execute();
+    return $db->lastInsertRowID();
+}
+
+function updateKnowledgeFileChunkCount($fileId) {
+    $db = getDB();
+    $stmt = $db->prepare('UPDATE knowledge_files SET chunk_count = (SELECT COUNT(*) FROM knowledge_chunks WHERE file_id = :id),
+        updated_at = datetime("now"), status = "ready" WHERE id = :id');
+    $stmt->bindValue(':id', $fileId, SQLITE3_INTEGER);
+    $stmt->execute();
+}
+
+function listKnowledgeFiles() {
+    $db = getDB();
+    $result = $db->query('SELECT * FROM knowledge_files ORDER BY created_at DESC');
+    $files = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $files[] = $row;
+    }
+    return $files;
+}
+
+function getKnowledgeFile($id) {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM knowledge_files WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    return $result->fetchArray(SQLITE3_ASSOC);
+}
+
+function deleteKnowledgeFile($id) {
+    $db = getDB();
+    $file = getKnowledgeFile($id);
+    if ($file) {
+        $uploadDir = __DIR__ . '/data/uploads/';
+        $filePath = $uploadDir . $file['filename'];
+        if (file_exists($filePath)) @unlink($filePath);
+    }
+    $stmt = $db->prepare('DELETE FROM knowledge_files WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    return $stmt->execute();
+}
+
+function searchKnowledgeBase($query, $maxResults = 5) {
+    $db = getDB();
+    $results = [];
+
+    // Try FTS5 first
+    $hasFTS = $db->querySingle("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='knowledge_fts'");
+    if ($hasFTS) {
+        try {
+            $stmt = $db->prepare('SELECT kc.*, kf.original_name, kf.description FROM knowledge_chunks kc
+                JOIN knowledge_files kf ON kc.file_id = kf.id
+                JOIN knowledge_fts fts ON fts.rowid = kc.id
+                WHERE knowledge_fts MATCH :query
+                ORDER BY rank LIMIT :limit');
+            $stmt->bindValue(':query', $query, SQLITE3_TEXT);
+            $stmt->bindValue(':limit', $maxResults, SQLITE3_INTEGER);
+            $res = $stmt->execute();
+            while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+                $results[] = $row;
+            }
+        } catch (Exception $e) { /* fallback below */ }
+    }
+
+    // Fallback: LIKE search across chunks
+    if (empty($results)) {
+        $terms = array_filter(explode(' ', trim($query)));
+        if (empty($terms)) return [];
+        $conditions = [];
+        foreach ($terms as $term) {
+            $escaped = SQLite3::escapeString($term);
+            $conditions[] = "kc.content LIKE '%{$escaped}%'";
+        }
+        $sql = 'SELECT kc.*, kf.original_name, kf.description FROM knowledge_chunks kc
+            JOIN knowledge_files kf ON kc.file_id = kf.id
+            WHERE (' . implode(' OR ', $conditions) . ')
+            LIMIT :limit';
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':limit', $maxResults, SQLITE3_INTEGER);
+        $res = $stmt->execute();
+        while ($row = $res->fetchArray(SQLITE3_ASSOC)) {
+            $results[] = $row;
+        }
+    }
+
+    return $results;
+}
+
+// ============================================
+// SCHEDULED TASK FUNCTIONS
+// ============================================
+
+function createScheduledTask($data) {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO scheduled_tasks (name, description, task_type, prompt, schedule_type, schedule_value, next_run, enabled, model)
+        VALUES (:name, :desc, :type, :prompt, :sched_type, :sched_val, :next_run, :enabled, :model)');
+    $stmt->bindValue(':name', $data['name'], SQLITE3_TEXT);
+    $stmt->bindValue(':desc', $data['description'] ?? '', SQLITE3_TEXT);
+    $stmt->bindValue(':type', $data['task_type'] ?? 'prompt', SQLITE3_TEXT);
+    $stmt->bindValue(':prompt', $data['prompt'] ?? '', SQLITE3_TEXT);
+    $stmt->bindValue(':sched_type', $data['schedule_type'], SQLITE3_TEXT);
+    $stmt->bindValue(':sched_val', $data['schedule_value'] ?? '', SQLITE3_TEXT);
+    $stmt->bindValue(':next_run', $data['next_run'] ?? null, SQLITE3_TEXT);
+    $stmt->bindValue(':enabled', isset($data['enabled']) ? intval($data['enabled']) : 1, SQLITE3_INTEGER);
+    $stmt->bindValue(':model', $data['model'] ?? null, SQLITE3_TEXT);
+    $stmt->execute();
+    return $db->lastInsertRowID();
+}
+
+function listScheduledTasks() {
+    $db = getDB();
+    $result = $db->query('SELECT * FROM scheduled_tasks ORDER BY created_at DESC');
+    $tasks = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $tasks[] = $row;
+    }
+    return $tasks;
+}
+
+function getScheduledTask($id) {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM scheduled_tasks WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    return $result->fetchArray(SQLITE3_ASSOC);
+}
+
+function updateScheduledTask($id, $data) {
+    $db = getDB();
+    $sets = ['updated_at = datetime("now")'];
+    $params = [];
+    $allowed = ['name', 'description', 'task_type', 'prompt', 'schedule_type', 'schedule_value', 'next_run', 'last_run', 'last_result', 'run_count', 'enabled', 'model'];
+    foreach ($allowed as $field) {
+        if (array_key_exists($field, $data)) {
+            $sets[] = "$field = :$field";
+            $params[":$field"] = $data[$field];
+        }
+    }
+    $sql = 'UPDATE scheduled_tasks SET ' . implode(', ', $sets) . ' WHERE id = :id';
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+    return $stmt->execute();
+}
+
+function deleteScheduledTask($id) {
+    $db = getDB();
+    $stmt = $db->prepare('DELETE FROM scheduled_tasks WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    return $stmt->execute();
+}
+
+function getDueTasks() {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM scheduled_tasks WHERE enabled = 1 AND next_run IS NOT NULL AND next_run <= datetime("now") ORDER BY next_run ASC');
+    $result = $stmt->execute();
+    $tasks = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $tasks[] = $row;
+    }
+    return $tasks;
+}
+
+function computeNextRun($scheduleType, $scheduleValue) {
+    $now = time();
+    switch ($scheduleType) {
+        case 'once': return null;
+        case 'interval':
+            $minutes = intval($scheduleValue);
+            return date('Y-m-d H:i:s', $now + $minutes * 60);
+        case 'daily':
+            $parts = explode(':', $scheduleValue);
+            $h = intval($parts[0] ?? 9);
+            $m = intval($parts[1] ?? 0);
+            $next = mktime($h, $m, 0);
+            if ($next <= $now) $next = mktime($h, $m, 0, date('n'), date('j') + 1);
+            return date('Y-m-d H:i:s', $next);
+        case 'weekly':
+            return date('Y-m-d H:i:s', $now + 7 * 86400);
+        case 'monthly':
+            return date('Y-m-d H:i:s', strtotime('+1 month', $now));
+        default: return null;
+    }
+}
+
+// ============================================
+// API TOKEN FUNCTIONS
+// ============================================
+
+function createApiToken($name, $permissions = 'chat', $expiresAt = null, $rateLimit = 60) {
+    $db = getDB();
+    $token = bin2hex(random_bytes(32));
+    $stmt = $db->prepare('INSERT INTO api_tokens (name, token, permissions, expires_at, rate_limit) VALUES (:name, :token, :perms, :expires, :rate)');
+    $stmt->bindValue(':name', $name, SQLITE3_TEXT);
+    $stmt->bindValue(':token', $token, SQLITE3_TEXT);
+    $stmt->bindValue(':perms', $permissions, SQLITE3_TEXT);
+    $stmt->bindValue(':expires', $expiresAt, SQLITE3_TEXT);
+    $stmt->bindValue(':rate', $rateLimit, SQLITE3_INTEGER);
+    $stmt->execute();
+    return ['id' => $db->lastInsertRowID(), 'token' => $token];
+}
+
+function validateApiToken($token) {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM api_tokens WHERE token = :token AND enabled = 1');
+    $stmt->bindValue(':token', $token, SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+    if (!$row) return false;
+    if ($row['expires_at'] && strtotime($row['expires_at']) < time()) return false;
+    // Update usage
+    $upd = $db->prepare('UPDATE api_tokens SET last_used = datetime("now"), usage_count = usage_count + 1 WHERE id = :id');
+    $upd->bindValue(':id', $row['id'], SQLITE3_INTEGER);
+    $upd->execute();
+    return $row;
+}
+
+function listApiTokens() {
+    $db = getDB();
+    $result = $db->query('SELECT id, name, permissions, last_used, usage_count, enabled, expires_at, rate_limit, created_at FROM api_tokens ORDER BY created_at DESC');
+    $tokens = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $tokens[] = $row;
+    }
+    return $tokens;
+}
+
+function revokeApiToken($id) {
+    $db = getDB();
+    $stmt = $db->prepare('UPDATE api_tokens SET enabled = 0 WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    return $stmt->execute();
+}
+
+function deleteApiToken($id) {
+    $db = getDB();
+    $stmt = $db->prepare('DELETE FROM api_tokens WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    return $stmt->execute();
+}
+
+// ============================================
+// TOOL CALL LOGGING
+// ============================================
+
+function logToolCall($conversationId, $toolName, $toolInput, $toolResult, $durationMs, $success = true, $messageId = null) {
+    $db = getDB();
+    $stmt = $db->prepare('INSERT INTO tool_calls (message_id, conversation_id, tool_name, tool_input, tool_result, duration_ms, success)
+        VALUES (:msg_id, :conv_id, :tool_name, :tool_input, :tool_result, :duration, :success)');
+    $stmt->bindValue(':msg_id', $messageId, SQLITE3_INTEGER);
+    $stmt->bindValue(':conv_id', $conversationId, SQLITE3_TEXT);
+    $stmt->bindValue(':tool_name', $toolName, SQLITE3_TEXT);
+    $stmt->bindValue(':tool_input', is_string($toolInput) ? $toolInput : json_encode($toolInput), SQLITE3_TEXT);
+    $stmt->bindValue(':tool_result', is_string($toolResult) ? $toolResult : json_encode($toolResult), SQLITE3_TEXT);
+    $stmt->bindValue(':duration', $durationMs, SQLITE3_INTEGER);
+    $stmt->bindValue(':success', $success ? 1 : 0, SQLITE3_INTEGER);
+    $stmt->execute();
+    return $db->lastInsertRowID();
+}
+
+// ============================================
+// AGENT PERSONAS
+// ============================================
+
+function listAgentPersonas() {
+    $db = getDB();
+    $result = $db->query('SELECT * FROM agent_personas ORDER BY is_default DESC, name ASC');
+    $personas = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $personas[] = $row;
+    }
+    return $personas;
+}
+
+function getAgentPersona($id) {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM agent_personas WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    $result = $stmt->execute();
+    return $result->fetchArray(SQLITE3_ASSOC);
+}
+
+function saveAgentPersona($data) {
+    $db = getDB();
+    if (!empty($data['id'])) {
+        $stmt = $db->prepare('UPDATE agent_personas SET name=:name, description=:desc, system_prompt=:sys, model=:model,
+            temperature=:temp, max_tokens=:max_tok, avatar_url=:avatar, enabled=:enabled, is_default=:default_p,
+            tools_enabled=:tools, kb_enabled=:kb, updated_at=datetime("now") WHERE id=:id');
+        $stmt->bindValue(':id', $data['id'], SQLITE3_INTEGER);
+    } else {
+        $stmt = $db->prepare('INSERT INTO agent_personas (name, description, system_prompt, model, temperature, max_tokens, avatar_url, enabled, is_default, tools_enabled, kb_enabled)
+            VALUES (:name, :desc, :sys, :model, :temp, :max_tok, :avatar, :enabled, :default_p, :tools, :kb)');
+    }
+    $stmt->bindValue(':name', $data['name'], SQLITE3_TEXT);
+    $stmt->bindValue(':desc', $data['description'] ?? '', SQLITE3_TEXT);
+    $stmt->bindValue(':sys', $data['system_prompt'] ?? '', SQLITE3_TEXT);
+    $stmt->bindValue(':model', $data['model'] ?? null, SQLITE3_TEXT);
+    $stmt->bindValue(':temp', floatval($data['temperature'] ?? 0.7), SQLITE3_FLOAT);
+    $stmt->bindValue(':max_tok', intval($data['max_tokens'] ?? 4096), SQLITE3_INTEGER);
+    $stmt->bindValue(':avatar', $data['avatar_url'] ?? null, SQLITE3_TEXT);
+    $stmt->bindValue(':enabled', intval($data['enabled'] ?? 1), SQLITE3_INTEGER);
+    $stmt->bindValue(':default_p', intval($data['is_default'] ?? 0), SQLITE3_INTEGER);
+    $stmt->bindValue(':tools', is_array($data['tools_enabled']) ? json_encode($data['tools_enabled']) : ($data['tools_enabled'] ?? '[]'), SQLITE3_TEXT);
+    $stmt->bindValue(':kb', intval($data['kb_enabled'] ?? 1), SQLITE3_INTEGER);
+    $stmt->execute();
+    return empty($data['id']) ? $db->lastInsertRowID() : $data['id'];
+}
+
+function deleteAgentPersona($id) {
+    $db = getDB();
+    $stmt = $db->prepare('DELETE FROM agent_personas WHERE id = :id');
+    $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+    return $stmt->execute();
+}
+
+// ============================================
+// USAGE STATISTICS
+// ============================================
+
+function recordUsageStat($model, $tokensIn, $tokensOut, $messages = 1, $toolCalls = 0, $kbQueries = 0) {
+    $db = getDB();
+    $today = date('Y-m-d');
+    $stmt = $db->prepare('INSERT INTO usage_stats (stat_date, model, tokens_in, tokens_out, message_count, tool_calls_count, kb_queries)
+        VALUES (:date, :model, :ti, :to, :msgs, :tools, :kb)
+        ON CONFLICT(stat_date, model) DO UPDATE SET
+            tokens_in = tokens_in + :ti,
+            tokens_out = tokens_out + :to,
+            message_count = message_count + :msgs,
+            tool_calls_count = tool_calls_count + :tools,
+            kb_queries = kb_queries + :kb');
+    $stmt->bindValue(':date', $today, SQLITE3_TEXT);
+    $stmt->bindValue(':model', $model ?: 'unknown', SQLITE3_TEXT);
+    $stmt->bindValue(':ti', intval($tokensIn), SQLITE3_INTEGER);
+    $stmt->bindValue(':to', intval($tokensOut), SQLITE3_INTEGER);
+    $stmt->bindValue(':msgs', intval($messages), SQLITE3_INTEGER);
+    $stmt->bindValue(':tools', intval($toolCalls), SQLITE3_INTEGER);
+    $stmt->bindValue(':kb', intval($kbQueries), SQLITE3_INTEGER);
+    $stmt->execute();
+}
+
+function getUsageStats($days = 30) {
+    $db = getDB();
+    $stmt = $db->prepare('SELECT * FROM usage_stats WHERE stat_date >= date("now", :days) ORDER BY stat_date DESC, model ASC');
+    $stmt->bindValue(':days', "-{$days} days", SQLITE3_TEXT);
+    $result = $stmt->execute();
+    $stats = [];
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $stats[] = $row;
+    }
+    return $stats;
 }
 
 // Initialize DB on include
