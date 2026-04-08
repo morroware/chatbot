@@ -1,0 +1,213 @@
+/* ===== MEMORY PANEL ===== */
+
+.memory-panel {
+    position: fixed;
+    top: 0; right: 0;
+    width: 360px;
+    max-width: 90vw;
+    height: 100%;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border-subtle);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 20px var(--shadow-color);
+    animation: slideInRight 0.3s ease;
+}
+
+.memory-panel-header {
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.memory-panel-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.btn-close-panel {
+    background: none; border: none;
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    line-height: 1;
+}
+.btn-close-panel:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+.memory-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.memory-description {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+}
+
+.memory-add {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.memory-add input {
+    flex: 1;
+    min-width: 150px;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+}
+
+.memory-add select {
+    padding: 0.4rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    outline: none;
+}
+
+.memory-group { margin-bottom: 1rem; }
+
+.memory-group-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.5px;
+}
+
+.memory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0.6rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    margin-bottom: 0.3rem;
+    gap: 0.5rem;
+}
+
+.memory-fact {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.memory-delete-btn {
+    background: none; border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0; line-height: 1;
+    flex-shrink: 0;
+}
+.memory-delete-btn:hover { color: #ef4444; }
+
+.memory-empty, .memory-loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* ===== SHORTCUTS MODAL ===== */
+
+.shortcuts-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shortcuts-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: 0 12px 48px var(--shadow-color);
+}
+
+.shortcuts-header {
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.shortcuts-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.shortcuts-body { padding: 1rem 1.25rem; }
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.shortcut-item kbd {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-subtle);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: inherit;
+    color: var(--text-primary);
+    margin: 0 0.1rem;
+}
+
+/* ===== NOTIFICATIONS ===== */
+
+.notification {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--bg-secondary);
+    border: 1px solid var(--theme-accent);
+    color: var(--text-primary);
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 16px var(--shadow-color);
+}
+.notification.error { border-color: #ef4444; color: #ef4444; }
+
+/* Screen flash */
+.screen-flash {
+    position: fixed; inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}

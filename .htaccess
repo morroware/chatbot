@@ -1,0 +1,25 @@
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Protect data directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^data/ - [F,L]
+</IfModule>
+
+# Protect config files from direct access
+<FilesMatch "\.(ini|db|sqlite)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect backup files
+<FilesMatch "\.backup\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
