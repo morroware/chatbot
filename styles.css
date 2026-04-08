@@ -1,6 +1,9 @@
-/* ===== CHATBOT UI - MODULAR CSS ===== */
-/* All styles organized into css/ directory modules */
+/* ===== CHATBOT UI — ELECTRIC NIGHT DESIGN SYSTEM ===== */
 
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Modular CSS layers */
 @import url('css/variables.css');
 @import url('css/base.css');
 @import url('css/sidebar.css');

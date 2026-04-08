@@ -9,18 +9,34 @@ html, body {
     margin: 0; padding: 0;
     width: 100%; height: 100%;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    background: var(--bg-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-void);
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     transition: background var(--speed-slow), color var(--speed-slow);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+/* Gradient mesh background */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 60% 50% at 20% 60%, rgba(124, 58, 237, 0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 20%, rgba(52, 211, 153, 0.04) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 60% 90%, rgba(124, 58, 237, 0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
 }
 
 .app-container {
     width: 100%; height: 100%;
     display: flex;
     position: relative;
+    z-index: 1;
 }
 
 .main-content {
@@ -28,7 +44,7 @@ html, body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    transition: margin-left var(--speed-normal);
+    transition: margin-left var(--speed-normal) cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 0;
 }
 
@@ -38,7 +54,6 @@ html, body {
 
 .app-wrapper {
     width: 100%; height: 100%;
-    max-width: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -47,7 +62,8 @@ html, body {
     border: none;
     border-radius: 0;
     background: var(--bg-card);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     color: var(--text-primary);
     height: 100%;
     display: flex;
@@ -61,63 +77,110 @@ html, body {
     overflow: hidden;
     flex: 1;
     padding: 0;
-    background: var(--bg-primary);
+    background: var(--bg-base);
+    position: relative;
 }
 
 .footer-credits {
-    padding: 0.3rem;
+    padding: 0.25rem;
     text-align: center;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-faint);
     flex-shrink: 0;
 }
 
 .footer-credits small {
     color: var(--text-muted) !important;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
 }
 
 /* ===== UTILITY ===== */
 .d-none { display: none !important; }
 
+/* ===== GRADIENT TEXT HELPER ===== */
+.gradient-text {
+    background: linear-gradient(135deg, var(--accent) 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 
 @keyframes messageSlideIn {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes shimmer {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.7; }
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
 }
 
 @keyframes blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    50%       { opacity: 0; }
+}
+
+@keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    70%  { transform: scale(1.4); opacity: 0; }
+    100% { transform: scale(1.4); opacity: 0; }
 }
 
 @keyframes pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
 }
 
 @keyframes headerShake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
+    0%, 100%                      { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90%       { transform: translateX(-3px); }
+    20%, 40%, 60%, 80%            { transform: translateX(3px); }
 }
 
 @keyframes typingBounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-    30% { transform: translateY(-8px); opacity: 1; }
+    0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+    30%           { transform: translateY(-6px); opacity: 1; }
 }
 
 @keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);   opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes orbitSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+@keyframes breathe {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.06); }
 }

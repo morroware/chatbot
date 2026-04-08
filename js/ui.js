@@ -41,23 +41,20 @@ export function applyTheme(themeName) {
     state.currentTheme = themeName;
 
     const root = document.documentElement;
-    root.style.setProperty('--theme-primary', theme.primaryColor);
-    root.style.setProperty('--theme-secondary', theme.secondaryColor);
-    root.style.setProperty('--theme-accent', theme.accentColor);
-    root.style.setProperty('--theme-background', theme.backgroundColor);
-    root.style.setProperty('--theme-header-gradient', theme.headerGradient);
+    // Set CSS custom properties — the CSS uses these, no direct DOM manipulation needed
+    root.style.setProperty('--theme-primary',          theme.primaryColor);
+    root.style.setProperty('--theme-secondary',        theme.secondaryColor);
+    root.style.setProperty('--theme-accent',           theme.accentColor);
+    root.style.setProperty('--theme-background',       theme.backgroundColor);
+    root.style.setProperty('--theme-header-gradient',  theme.headerGradient);
 
-    const header = document.querySelector('.card-header');
-    if (header) header.style.background = theme.headerGradient;
-
-    const card = document.querySelector('.card');
-    if (card) card.style.backgroundColor = theme.secondaryColor;
-
-    const chat = document.getElementById('chatContainer');
-    if (chat) chat.style.backgroundColor = theme.backgroundColor;
-
-    const input = document.querySelector('.input-area');
-    if (input) input.style.backgroundColor = theme.secondaryColor;
+    // Sync --accent (used by new design system) with the theme accent
+    root.style.setProperty('--accent',       theme.accentColor);
+    root.style.setProperty('--accent-deep',  theme.accentColor);
+    // Derive glow/subtle from accent
+    root.style.setProperty('--accent-glow',   `color-mix(in srgb, ${theme.accentColor} 25%, transparent)`);
+    root.style.setProperty('--accent-subtle', `color-mix(in srgb, ${theme.accentColor} 8%, transparent)`);
+    root.style.setProperty('--border-accent', `color-mix(in srgb, ${theme.accentColor} 22%, transparent)`);
 }
 
 export function toggleThemeMenu() {
