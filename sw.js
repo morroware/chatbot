@@ -1,5 +1,5 @@
 // Service worker - caches static assets for faster loads
-const CACHE_NAME = 'chatbot-v3';
+const CACHE_NAME = 'chatbot-v4';
 const STATIC_ASSETS = [
     './',
     './index.html',
