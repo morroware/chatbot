@@ -7,6 +7,8 @@ import { newChat } from './chat.js';
 import { toggleSidebar, exportCurrentChat } from './sidebar.js';
 import { toggleDarkMode } from './ui.js';
 import { closeMemoryPanel, toggleMemoryPanel } from './memory.js';
+import { toggleKnowledgePanel } from './knowledge.js';
+import { toggleTasksPanel } from './tasks.js';
 
 export function initShortcuts() {
     document.addEventListener('keydown', handleKeydown);
@@ -19,20 +21,28 @@ export function initShortcuts() {
 function handleKeydown(e) {
     const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
 
-    // Escape - close any open panel
+    // Escape — close any open panel/modal (priority order)
     if (e.key === 'Escape') {
         const shortcuts = document.getElementById('shortcutsModal');
         if (shortcuts?.style.display !== 'none') {
             shortcuts.style.display = 'none';
             return;
         }
+        const themeMenu = document.getElementById('themeMenu');
+        if (themeMenu?.style.display !== 'none') {
+            themeMenu.style.display = 'none';
+            return;
+        }
         if (state.memoryPanelOpen) {
             closeMemoryPanel();
             return;
         }
-        const themeMenu = document.getElementById('themeMenu');
-        if (themeMenu?.style.display !== 'none') {
-            themeMenu.style.display = 'none';
+        if (state.knowledgePanelOpen) {
+            toggleKnowledgePanel();
+            return;
+        }
+        if (state.tasksPanelOpen) {
+            toggleTasksPanel();
             return;
         }
         return;
@@ -74,6 +84,14 @@ function handleKeydown(e) {
             case 'e': // Export
                 e.preventDefault();
                 exportCurrentChat('json');
+                break;
+            case 'j': // Knowledge base
+                e.preventDefault();
+                toggleKnowledgePanel();
+                break;
+            case 't': // Tasks panel
+                e.preventDefault();
+                toggleTasksPanel();
                 break;
             case '/': // Show shortcuts
                 e.preventDefault();

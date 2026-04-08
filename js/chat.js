@@ -8,6 +8,7 @@ import * as api from './api.js';
 import { applyTheme, updateEmotion, updateTokenCount, showNotification, triggerHaptic, escapeHtml, formatTimestamp, setInputState } from './ui.js';
 import { refreshConversationList } from './sidebar.js';
 import { triggerMemoryExtraction } from './memory.js';
+import { removeImage, stopListening } from './media.js';
 
 // ============================================
 // MARKDOWN
@@ -78,7 +79,6 @@ export async function sendMessage(text = null) {
 
     if (!message && !state.uploadedImage) return;
     if (state.isListening) {
-        const { stopListening } = await import('./media.js');
         stopListening();
     }
 
@@ -112,7 +112,6 @@ export async function sendMessage(text = null) {
     // Clear input
     if (input) input.value = '';
     autoResizeTextarea(input);
-    const { removeImage } = await import('./media.js');
     removeImage();
 
     // Show typing indicator
@@ -249,9 +248,6 @@ function handleStreamEvent(eventType, data, messageDiv, timestamp) {
                 }
 
                 // Update conversation ID if we got one back
-                if (data.conversation_id && !state.currentConversationId) {
-                    state.currentConversationId = data.conversation_id;
-                }
                 if (data.conversation_id) {
                     state.currentConversationId = data.conversation_id;
                 }
@@ -659,7 +655,7 @@ export function setupSuggestedPrompts() {
 
 function showError(message) {
     triggerHaptic();
-    addMessageToChat('bot', `Sorry, I ran into an issue: ${message}`, null, 'concerned');
+    addMessageToChat('assistant', `Sorry, I ran into an issue: ${message}`, null, 'concerned');
 }
 
 // ============================================
@@ -721,7 +717,7 @@ export async function loadConversation(conversationId) {
         if (msg.role === 'user') {
             addMessageToChat('user', text, image, null, null, timestamp, msg.id);
         } else {
-            addMessageToChat('bot', text, null, msg.emotion, msg.theme, timestamp, msg.id);
+            addMessageToChat('assistant', text, null, msg.emotion, msg.theme, timestamp, msg.id);
             if (msg.emotion) updateEmotion(msg.emotion);
             if (msg.theme && state.themes[msg.theme]) applyTheme(msg.theme);
         }

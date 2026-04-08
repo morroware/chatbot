@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" id="appTitle" content="Chatbot">
-    <meta name="theme-color" content="#6366f1" id="themeColor">
+    <meta name="theme-color" content="#a78bfa" id="themeColor">
     <meta name="description" id="metaDescription" content="AI Chatbot Platform">
     <title id="pageTitle">AI Chat</title>
     <link rel="icon" type="image/svg+xml" href="avatar.svg">
@@ -19,7 +19,8 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+
+        <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="btn-new-chat" id="newChatBtn" title="New Chat (Ctrl+N)">
@@ -29,7 +30,7 @@
             </div>
 
             <div class="sidebar-search">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search conversations..." autocomplete="off">
+                <input type="text" class="search-input" id="searchInput" placeholder="&#128269; Search conversations..." autocomplete="off">
             </div>
 
             <div class="sidebar-conversations" id="conversationList">
@@ -38,29 +39,30 @@
 
             <div class="sidebar-footer">
                 <div class="sidebar-footer-row">
-                    <button class="btn-sidebar-action" id="memoryBtn" title="Memory & Facts">
-                        <span class="icon">&#128065;</span> Memory
+                    <button class="btn-sidebar-action" id="memoryBtn" title="Memory (long-term facts)">
+                        <span>&#128065;</span> Memory
                     </button>
                     <button class="btn-sidebar-action" id="knowledgeBtn" title="Knowledge Base (Ctrl+J)">
-                        <span class="icon">&#128218;</span> Docs
+                        <span>&#128218;</span> Docs
                         <span class="sidebar-badge" id="kbBadge" style="display:none">0</span>
                     </button>
-                    <button class="btn-sidebar-action" id="tasksBtn" title="Scheduled Tasks">
-                        <span class="icon">&#9200;</span> Tasks
+                    <button class="btn-sidebar-action" id="tasksBtn" title="Scheduled Tasks (Ctrl+T)">
+                        <span>&#9200;</span> Tasks
                         <span class="sidebar-badge" id="tasksBadge" style="display:none">0</span>
                     </button>
-                    <button class="btn-sidebar-action" id="settingsToggle" title="Settings">
-                        <span class="icon">&#9881;</span>
+                    <button class="btn-sidebar-action" id="settingsToggle" title="Admin Settings">
+                        <span>&#9881;</span>
                     </button>
                 </div>
                 <div class="sidebar-stats" id="sidebarStats"></div>
             </div>
         </aside>
 
-        <!-- Main Chat Area -->
+        <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content" id="mainContent">
             <div class="app-wrapper">
                 <div class="card shadow-lg">
+
                     <!-- Header -->
                     <div class="card-header bg-primary text-white">
                         <div class="header-content">
@@ -68,26 +70,29 @@
                                 <button class="btn-hamburger" id="sidebarToggle" title="Toggle sidebar (Ctrl+B)">
                                     <span></span><span></span><span></span>
                                 </button>
-                                <img id="headerAvatar" src="" alt="Bot" class="avatar-header">
+
+                                <!-- Avatar with status dot -->
+                                <div class="avatar-header-wrap">
+                                    <img id="headerAvatar" src="" alt="Bot" class="avatar-header">
+                                    <span class="header-status-dot"></span>
+                                </div>
+
                                 <div class="header-text">
                                     <h2 class="header-title" id="headerTitle">Loading...</h2>
                                     <p class="emotion-indicator" id="emotionIndicator">
-                                        <span id="botNameEmotion">Bot</span>: <span id="currentEmotion">loading</span>
+                                        <span id="botNameEmotion">Bot</span>
+                                        <span id="currentEmotion">neutral</span>
                                     </p>
                                 </div>
                             </div>
 
                             <div class="header-right">
-                                <!-- Model Selector -->
-                                <select class="model-selector" id="modelSelector" title="Select AI model">
-                                </select>
+                                <select class="model-selector" id="modelSelector" title="Select AI model"></select>
 
-                                <!-- Dark/Light Mode Toggle -->
                                 <button class="btn-icon-header" id="darkModeToggle" title="Toggle dark/light mode (Ctrl+D)">
                                     <span id="darkModeIcon">&#9790;</span>
                                 </button>
 
-                                <!-- Theme Switcher -->
                                 <div class="theme-switcher-header" id="themeSwitcher">
                                     <button class="btn-icon-header" onclick="toggleThemeMenu()" title="Change theme">
                                         &#127912;
@@ -98,7 +103,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Token Counter -->
                                 <div class="token-counter" id="tokenCounter" title="Token usage this session">
                                     <span class="token-icon">&#9889;</span>
                                     <span id="tokenCount">0</span>
@@ -107,18 +111,22 @@
                         </div>
                     </div>
 
+                    <!-- Chat body -->
                     <div class="card-body p-0">
-                        <div id="chatContainer" class="chat-container" ondragover="handleDragOver(event)" ondrop="handleDrop(event)" ondragleave="handleDragLeave(event)">
+                        <div id="chatContainer" class="chat-container"
+                             ondragover="handleDragOver(event)"
+                             ondrop="handleDrop(event)"
+                             ondragleave="handleDragLeave(event)">
+
+                            <!-- Welcome screen (replaced when chat starts) -->
                             <div class="welcome-message" id="welcomeMessage">
                                 <img id="welcomeAvatar" src="" alt="Bot" class="avatar-large">
                                 <h4 id="welcomeTitle">Loading...</h4>
                                 <p id="welcomeText">Please wait...</p>
-                                <div class="suggested-prompts" id="suggestedPrompts">
-                                    <!-- Populated by JS -->
-                                </div>
+                                <div class="suggested-prompts" id="suggestedPrompts"></div>
                             </div>
 
-                            <!-- Drag overlay -->
+                            <!-- Drag & drop overlay -->
                             <div class="drag-overlay" id="dragOverlay">
                                 <div class="drag-content">
                                     <span class="drag-icon">&#128206;</span>
@@ -127,7 +135,7 @@
                             </div>
                         </div>
 
-                        <!-- Typing Indicator -->
+                        <!-- Typing indicator -->
                         <div class="typing-indicator" id="typingIndicator" style="display: none;">
                             <img id="typingAvatar" src="" alt="" class="avatar-typing">
                             <div class="typing-dots">
@@ -135,7 +143,9 @@
                             </div>
                         </div>
 
+                        <!-- Input area -->
                         <div class="input-area">
+                            <!-- Image preview (hidden by default) -->
                             <div id="imagePreviewContainer" class="image-preview-container d-none">
                                 <div class="image-preview-wrapper">
                                     <img id="imagePreview" src="" alt="Preview">
@@ -146,9 +156,11 @@
 
                             <div class="input-controls">
                                 <input type="file" id="imageUpload" accept="image/*" class="d-none">
-                                <button type="button" class="btn btn-outline-secondary btn-icon" id="imageUploadBtn" title="Upload image (Ctrl+U)">&#128247;</button>
-                                <button type="button" class="btn btn-outline-secondary btn-icon" id="voiceInputBtn" title="Voice input (Ctrl+M)">&#127908;</button>
-                                <textarea class="form-control message-input" id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+                                <button type="button" class="btn btn-icon" id="imageUploadBtn" title="Upload image (Ctrl+U)">&#128247;</button>
+                                <button type="button" class="btn btn-icon" id="voiceInputBtn" title="Voice input (Ctrl+M)">&#127908;</button>
+                                <textarea class="form-control message-input" id="messageInput"
+                                          placeholder="Ask me anything..."
+                                          autocomplete="off" rows="1"></textarea>
                                 <button type="button" class="btn btn-primary btn-icon" id="sendBtn" title="Send (Enter)" aria-label="Send message">
                                     <span id="sendIcon">&#10148;</span>
                                     <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
@@ -158,12 +170,12 @@
                             <div class="input-footer">
                                 <span class="input-hint" id="inputHint">Enter to send &bull; Shift+Enter for new line &bull; Ctrl+N new chat</span>
                                 <div class="ai-feature-toggles">
-                                    <label class="feature-toggle" title="Extended thinking: Claude reasons more deeply (uses more tokens)">
+                                    <label class="feature-toggle" title="Extended thinking: deeper reasoning (uses more tokens)">
                                         <input type="checkbox" id="extendedThinkingToggle">
                                         <span class="toggle-track"></span>
-                                        <span class="toggle-label" id="thinkingLabel">Deep thinking</span>
+                                        <span class="toggle-label" id="thinkingLabel">Deep Think</span>
                                     </label>
-                                    <label class="feature-toggle" title="Enable AI tools: web fetch, calculator, memory search, etc.">
+                                    <label class="feature-toggle" title="Enable AI tools (web fetch, calculator, etc.)">
                                         <input type="checkbox" id="toolsToggle" checked>
                                         <span class="toggle-track"></span>
                                         <span class="toggle-label">Tools</span>
@@ -185,14 +197,14 @@
             </div>
         </main>
 
-        <!-- Memory Panel (overlay) -->
+        <!-- ===== MEMORY PANEL ===== -->
         <div class="memory-panel" id="memoryPanel" style="display: none;">
             <div class="memory-panel-header">
                 <h3>&#128065; Long-Term Memory</h3>
                 <button class="btn-close-panel" id="closeMemoryPanel">&times;</button>
             </div>
             <div class="memory-panel-body">
-                <p class="memory-description">Facts the bot remembers about you across conversations.</p>
+                <p class="memory-description">Facts remembered across all conversations.</p>
                 <div class="memory-add">
                     <input type="text" id="newMemoryInput" placeholder="Add a fact manually..." class="form-control">
                     <select id="newMemoryType" class="form-select">
@@ -205,13 +217,11 @@
                     </select>
                     <button class="btn btn-primary btn-sm" id="addMemoryBtn">Add</button>
                 </div>
-                <div class="memory-list" id="memoryList">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="memory-list" id="memoryList"></div>
             </div>
         </div>
 
-        <!-- Knowledge Base Panel -->
+        <!-- ===== KNOWLEDGE BASE PANEL ===== -->
         <div class="side-panel" id="knowledgePanel">
             <div class="side-panel-header">
                 <h3>&#128218; Knowledge Base</h3>
@@ -220,7 +230,6 @@
             <div class="side-panel-body">
                 <p class="panel-description">Upload documents to give the AI context from your files. Supports PDF, DOCX, TXT, CSV, Markdown, JSON, HTML.</p>
 
-                <!-- Upload area -->
                 <div class="kb-upload-area" id="kbUploadArea">
                     <div class="kb-upload-icon">&#128228;</div>
                     <div class="kb-upload-text">Drop files here or click to upload</div>
@@ -234,17 +243,14 @@
                     <button class="btn btn-primary btn-sm" id="kbUploadBtn">Upload File</button>
                 </div>
 
-                <!-- Progress bar -->
                 <div id="kbUploadProgress" style="display:none" class="kb-progress-wrapper">
                     <div class="kb-progress-bar" id="kbProgressBar"></div>
                 </div>
 
-                <!-- Search -->
                 <div class="kb-search-wrapper">
                     <input type="text" id="kbSearchInput" class="kb-input" placeholder="&#128269; Search knowledge base...">
                 </div>
 
-                <!-- File list -->
                 <div id="kbFileList" class="kb-file-list">
                     <div class="kb-empty">
                         <div class="kb-empty-icon">&#128218;</div>
@@ -255,7 +261,7 @@
             </div>
         </div>
 
-        <!-- Tasks Panel -->
+        <!-- ===== TASKS PANEL ===== -->
         <div class="side-panel" id="tasksPanel">
             <div class="side-panel-header">
                 <h3>&#9200; Scheduled Tasks</h3>
@@ -266,7 +272,6 @@
 
                 <button class="btn btn-primary btn-sm mb-3" id="createTaskBtn" style="width:100%">+ Create New Task</button>
 
-                <!-- Task creation/edit form -->
                 <div id="taskForm" style="display:none" class="task-form">
                     <h4 id="taskFormTitle">New Task</h4>
                     <div class="task-form-fields">
@@ -292,7 +297,6 @@
                     </div>
                 </div>
 
-                <!-- Task list -->
                 <div id="taskList" class="task-list">
                     <div class="kb-empty">
                         <div class="kb-empty-icon">&#9200;</div>
@@ -303,7 +307,7 @@
             </div>
         </div>
 
-        <!-- KB File Detail Modal -->
+        <!-- ===== KB FILE DETAIL MODAL ===== -->
         <div class="modal-overlay" id="kbDetailModal">
             <div class="modal-dialog">
                 <div class="modal-header">
@@ -314,7 +318,7 @@
             </div>
         </div>
 
-        <!-- Keyboard Shortcuts Modal -->
+        <!-- ===== KEYBOARD SHORTCUTS MODAL ===== -->
         <div class="shortcuts-modal" id="shortcutsModal" style="display: none;">
             <div class="shortcuts-content">
                 <div class="shortcuts-header">
@@ -322,21 +326,24 @@
                     <button class="btn-close-panel" id="closeShortcuts">&times;</button>
                 </div>
                 <div class="shortcuts-body">
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>N</kbd> <span>New chat</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>B</kbd> <span>Toggle sidebar</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>D</kbd> <span>Toggle dark/light mode</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>K</kbd> <span>Search conversations</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>U</kbd> <span>Upload image</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>M</kbd> <span>Voice input</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>E</kbd> <span>Export chat</span></div>
-                    <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>/</kbd> <span>Show shortcuts</span></div>
-                    <div class="shortcut-item"><kbd>Enter</kbd> <span>Send message</span></div>
-                    <div class="shortcut-item"><kbd>Shift</kbd>+<kbd>Enter</kbd> <span>New line</span></div>
-                    <div class="shortcut-item"><kbd>Escape</kbd> <span>Close panels</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>N</kbd></span> <span>New chat</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>B</kbd></span> <span>Toggle sidebar</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>D</kbd></span> <span>Toggle dark/light mode</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>K</kbd></span> <span>Focus search</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>U</kbd></span> <span>Upload image</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>M</kbd></span> <span>Voice input</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>E</kbd></span> <span>Export chat</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>J</kbd></span> <span>Knowledge base</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>T</kbd></span> <span>Tasks panel</span></div>
+                    <div class="shortcut-item"><span><kbd>Ctrl</kbd>+<kbd>/</kbd></span> <span>Show shortcuts</span></div>
+                    <div class="shortcut-item"><span><kbd>Enter</kbd></span> <span>Send message</span></div>
+                    <div class="shortcut-item"><span><kbd>Shift</kbd>+<kbd>Enter</kbd></span> <span>New line</span></div>
+                    <div class="shortcut-item"><span><kbd>Escape</kbd></span> <span>Close panels</span></div>
                 </div>
             </div>
         </div>
-    </div>
+
+    </div><!-- /app-container -->
 
     <script type="module" src="js/app.js"></script>
 </body>
