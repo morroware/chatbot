@@ -9,10 +9,16 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require_once __DIR__ . '/db.php';
-
 header('Content-Type: application/json');
 header('X-Content-Type-Options: nosniff');
+
+try {
+    require_once __DIR__ . '/db.php';
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    exit;
+}
 
 function jsonResponse($data, $code = 200) {
     http_response_code($code);

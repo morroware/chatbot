@@ -9,7 +9,14 @@ session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require_once __DIR__ . '/db.php';
+try {
+    require_once __DIR__ . '/db.php';
+} catch (Exception $e) {
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
+    exit;
+}
 
 // ============================================
 // SSE HEADERS
