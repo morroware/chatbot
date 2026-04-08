@@ -1,0 +1,24 @@
+# Database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Config backups
+*.backup.*
+
+# Sensitive files (uncomment if you don't want to track config)
+# config.ini
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# PHP sessions
+sess_*

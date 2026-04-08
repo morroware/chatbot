@@ -110,12 +110,6 @@ if (isset($config['model_ids'][$requestedModel])) {
     $modelId = $requestedModel;
 }
 
-// Determine provider from model ID
-$provider = 'anthropic';
-if (strpos($modelId, 'gpt') === 0 || strpos($modelId, 'o1') === 0 || strpos($modelId, 'o3') === 0) {
-    $provider = 'openai';
-}
-
 // ============================================
 // CONVERSATION PERSISTENCE
 // ============================================
