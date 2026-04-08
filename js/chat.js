@@ -92,9 +92,10 @@ export async function sendMessage(text = null) {
     // Build content
     const userContent = [];
     if (state.uploadedImage) {
+        const base64Data = state.uploadedImage.includes(',') ? state.uploadedImage.split(',')[1] : state.uploadedImage;
         userContent.push({
             type: 'image',
-            source: { type: 'base64', media_type: state.imageType, data: state.uploadedImage.split(',')[1] },
+            source: { type: 'base64', media_type: state.imageType, data: base64Data },
         });
     }
     if (message) {
@@ -162,7 +163,7 @@ function createStreamingMessage(timestamp) {
     div.id = 'streamingMessage';
 
     div.innerHTML = `
-        <img src="${state.config.general.avatar_image || 'avatar.png'}" alt="${state.config.general.bot_name}" class="avatar">
+        <img src="${state.config.general.avatar_image || 'avatar.svg'}" alt="${state.config.general.bot_name}" class="avatar">
         <div class="message-content">
             <div class="message-text markdown-content"></div>
             <div class="message-timestamp">${formatTimestamp(timestamp)}</div>
@@ -336,7 +337,7 @@ export function addMessageToChat(sender, text, image, emotion, theme, timestamp 
 
         const rendered = renderMarkdown(text);
         div.innerHTML = `
-            <img src="${state.config?.general?.avatar_image || 'avatar.png'}" alt="${state.config?.general?.bot_name || 'Bot'}" class="avatar">
+            <img src="${state.config?.general?.avatar_image || 'avatar.svg'}" alt="${state.config?.general?.bot_name || 'Bot'}" class="avatar">
             <div class="message-content">
                 <div class="message-text markdown-content">${rendered}</div>
                 <div class="message-timestamp">${formatTimestamp(timestamp)}</div>
@@ -373,6 +374,8 @@ function addMessageActions(messageDiv, text, role) {
             copyBtn.innerHTML = '&#10003;';
             triggerHaptic('light');
             setTimeout(() => { copyBtn.innerHTML = '&#128203;'; }, 1500);
+        }).catch(() => {
+            showNotification('Failed to copy to clipboard', 'error');
         });
     });
     actions.appendChild(copyBtn);
@@ -665,7 +668,7 @@ export function showWelcome() {
     const gen = state.config.general;
     chat.innerHTML = `
         <div class="welcome-message" id="welcomeMessage">
-            <img id="welcomeAvatar" src="${gen.avatar_image || 'avatar.png'}" alt="${gen.bot_name}" class="avatar-large">
+            <img id="welcomeAvatar" src="${gen.avatar_image || 'avatar.svg'}" alt="${gen.bot_name}" class="avatar-large">
             <h4 id="welcomeTitle">${gen.welcome_title || 'Welcome!'}</h4>
             <p id="welcomeText">${gen.welcome_message || 'How can I help you today?'}</p>
             <div class="suggested-prompts" id="suggestedPrompts"></div>

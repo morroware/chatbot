@@ -146,7 +146,7 @@ function updatePageWithConfig() {
     if (appTitle) appTitle.content = gen.bot_title;
     if (metaDesc) metaDesc.content = gen.bot_description || '';
 
-    const avatarSrc = gen.avatar_image || 'avatar.png';
+    const avatarSrc = gen.avatar_image || 'avatar.svg';
     for (const id of ['headerAvatar', 'welcomeAvatar', 'typingAvatar']) {
         const el = document.getElementById(id);
         if (el) {

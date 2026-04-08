@@ -67,9 +67,9 @@ if (!checkRateLimit()) {
 // ============================================
 // LOAD CONFIGURATIONS
 // ============================================
-$config = parse_ini_file('config.ini', true);
-$emotions = parse_ini_file('emotions.ini', true);
-$themes = parse_ini_file('themes.ini', true);
+$config = parse_ini_file(__DIR__ . '/config.ini', true);
+$emotions = parse_ini_file(__DIR__ . '/emotions.ini', true);
+$themes = parse_ini_file(__DIR__ . '/themes.ini', true);
 
 if (!$config || !$emotions || !$themes) {
     sendError('Configuration files not found or invalid', 'CONFIG_ERROR');
@@ -240,8 +240,8 @@ function manageContext($messages, $config) {
             $content = $msg['content'];
         }
 
-        if (strlen($content) > 200) {
-            $content = substr($content, 0, 200) . '...';
+        if (mb_strlen($content, 'UTF-8') > 200) {
+            $content = mb_substr($content, 0, 200, 'UTF-8') . '...';
         }
 
         $summaryParts[] = "{$role}: {$content}";
