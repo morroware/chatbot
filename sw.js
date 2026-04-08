@@ -45,8 +45,11 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Network-first for API calls, cache-first for static assets
+    // Skip API calls, non-GET requests, and cross-origin requests
     if (e.request.url.includes('.php') || e.request.method !== 'GET') {
+        return;
+    }
+    if (new URL(e.request.url).origin !== self.location.origin) {
         return;
     }
 
