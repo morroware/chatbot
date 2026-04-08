@@ -12,11 +12,22 @@ function getDB() {
 
     $dataDir = __DIR__ . '/data';
     if (!is_dir($dataDir)) {
-        mkdir($dataDir, 0755, true);
+        if (!@mkdir($dataDir, 0755, true)) {
+            throw new RuntimeException("Cannot create data directory: $dataDir — check file permissions");
+        }
+    }
+    if (!is_writable($dataDir)) {
+        throw new RuntimeException("Data directory is not writable: $dataDir — check file permissions");
     }
 
     $isNew = !file_exists(DB_PATH);
-    $db = new SQLite3(DB_PATH);
+
+    try {
+        $db = new SQLite3(DB_PATH);
+    } catch (Exception $e) {
+        throw new RuntimeException("Cannot open database: " . $e->getMessage());
+    }
+
     $db->busyTimeout(5000);
     $db->exec('PRAGMA journal_mode=WAL');
     $db->exec('PRAGMA foreign_keys=ON');
